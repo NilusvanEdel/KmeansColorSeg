@@ -13,6 +13,9 @@ using namespace cv;
 class KMeansClus
 {
 public:
+    // Constructor where the optimal number of k is calculated automatically
+    KMeansClus(vector<Mat> f);
+    // Constructor with given k-number
     KMeansClus(vector<Mat> f, int k);
     ~KMeansClus();
     vector<Mat> startClustering();
@@ -21,6 +24,13 @@ private:
     vector<Mat> frames;
     // vector with the int of the color of clustercenters
     vector<Vec4f> centers;
+    // calculate the optimal value of k
+    int calculateK();
+    // the actual kMeans algorithm
+    Mat kMeansAlgorithm(Mat mat);
+    // maximal k
+    int kMax = 25;
+    int** memberOfCluster;
 };
 
 #endif //NAIVEAPPROACHKMEANSCSEG_KMEANS_HPP

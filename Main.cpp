@@ -12,8 +12,8 @@ int main(int argc, char* argv[])
     else
     {
         std::vector<Mat> frames = vidCap.readFrames();
-        KMeansClus kmeans(frames, 5);
-        kmeans.startClustering();
+        KMeansClus kmeans(frames);
+        //kmeans.startClustering();
     }
 
     return 0;
