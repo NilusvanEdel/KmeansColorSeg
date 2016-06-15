@@ -27,10 +27,11 @@ private:
     // calculate the optimal value of k
     int calculateK();
     // the actual kMeans algorithm
-    Mat kMeansAlgorithm(Mat mat);
+    void kMeansAlgorithm(Mat mat);
     // maximal k
-    int kMax = 25;
+    const int kMax = 25;
     int** memberOfCluster;
+    vector <int> occCounter;
 };
 
 #endif //NAIVEAPPROACHKMEANSCSEG_KMEANS_HPP

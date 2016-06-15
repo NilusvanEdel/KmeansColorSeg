@@ -53,99 +53,38 @@ KMeansClus::~KMeansClus() {
     for (int i = 0; i < frames[0].rows; ++i) {
         delete memberOfCluster[i];
     }
+    delete [] memberOfCluster;
+    centers.clear();
+    frames.clear();
+    occCounter.clear();
 }
 
 vector<Mat> KMeansClus::startClustering() {
     // begin of the loop
     for (int frameCounter = 0; frameCounter < frames.size(); frameCounter++)
     {
-        frames[frameCounter] = kMeansAlgorithm(frames[frameCounter]);
+        kMeansAlgorithm(frames[frameCounter]);
+        Mat* temp = new Mat(frames[frameCounter].size(),frames[frameCounter].type());
+        for (int y = 0; y < frames[frameCounter].rows; y++)
+        {
+            for (int x = 0; x < frames[frameCounter].cols; x++)
+            {
+                Vec3b tmp;
+                tmp(0) = centers[memberOfCluster[y][x]](0);
+                tmp(1) = centers[memberOfCluster[y][x]](1);
+                tmp(2) = centers[memberOfCluster[y][x]](2);
+                temp->at<Vec3b>(y,x) = tmp;
+            }
+        }
         stringstream file;
         file << "/home/nilus/test/test.jpg" << frameCounter << ".jpg";
-        imwrite(file.str(),frames[frameCounter]);
+        imwrite(file.str(),*temp);
         cout << "frame: " <<frameCounter <<" written" << endl;
+        temp->release();
     }
 }
 
-int KMeansClus::calculateK() {
-    vector<Vec4f> tmp(1);
-    fill (tmp.begin(),tmp.end(),0);
-    centers = tmp;
-    vector <int> validity;
-    Mat mat = kMeansAlgorithm(frames[0]);
-    Vec3b minHSV = {255,255,255};
-    Vec3b maxHSV = {0,0,0};
-    int maxH, maxS, maxV = 0;
-    for (int k=0; k<kMax; k++)
-    {
-        vector<Vec3f> variance(centers.size());
-        std::fill (variance.begin(),variance.end(),0);
-        // the intraMeassurement
-        int intraMeassure = 0;
-        // the interMeassurement
-        int interMeassure = INT_MAX;
-        for (int y = 0; y < frames[0].rows; y++)
-        {
-            for (int x = 0; x < frames[0].cols; x++)
-            {
-                // calculates (x-center)² and intraMeassurement=(sqrt(x-correspondingCenter)²)
-                for (int i = 0; i < 3; i++) {
-                    variance[memberOfCluster[y][x]](i) += pow(frames[0].at<Vec3b>(y,x)(i) - mat.at<Vec3b>(y,x)(i), 2);
-                    if (!(y == 0&& x == 0)) variance[memberOfCluster[y][x]]/=2;
-                    intraMeassure = sqrt(pow(variance[memberOfCluster[y][x]](i)-mat.at<Vec3b>(y,x)(i), 2));
-                    if (frames[0].at<Vec3b>(y,x)(i) < minHSV(i))  minHSV(i) = frames[0].at<Vec3b>(y,x)(i);
-                    if (frames[0].at<Vec3b>(y,x)(i) > maxHSV(i))  maxHSV(i) = frames[0].at<Vec3b>(y,x)(i);
-                }
-
-            }
-        }
-        // the actual intraMeassurement
-        intraMeassure /= frames[0].rows * frames[0].cols;
-        vector <int> singleVariance(centers.size());
-        fill(singleVariance.begin(),singleVariance.end(),0);
-        cout << "K: " << k << endl;
-        for (int i=0;i < variance.size(); i++)
-        {
-            float tmp = 0;
-            // divides by the actual numberOfClustermember and adds all to one single Variance
-            for (int j = 0; j < 3; j++) singleVariance[i] += variance[i](j);
-            for (auto it = singleVariance.begin(); it != singleVariance.end(); it++) *it /= 3;
-            // calcuated the smallest interMeassurement sqrt((center i - center j)²)
-            for (int j = 0; j < centers.size(); j++)
-            {
-                if (j==i) continue;
-                for (int t = 0; t < 3; t++)
-                {
-                    tmp += sqrt(pow(centers[i](t) - centers[j](t),2));
-                }
-                tmp/=3;
-                if (tmp < interMeassure) interMeassure = tmp;
-            }
-
-        }
-        if (interMeassure == 0) validity.push_back(INT_MAX);
-        else validity.push_back(intraMeassure/interMeassure);
-        auto clusterToSplit = min_element(begin(singleVariance), end(singleVariance));
-        cout <<  "cluster To Split: "<< *clusterToSplit << endl;
-        Vec4f newCenter = {0,0,0,0};
-        cout << "New Center: ";
-        for (int t = 0; t < 3; t++)
-        {
-            centers[*clusterToSplit](t) -= (minHSV[t]+maxHSV[t])/2;
-            newCenter(t) += (minHSV[t]+maxHSV[t])/2;
-            if (centers[*clusterToSplit][t] < 0) centers[*clusterToSplit][t] = 0;
-            if (newCenter[t] > 255) newCenter[t] = 255;
-            cout << newCenter[t]<< " ";
-        }
-        cout << endl;
-        centers.push_back(newCenter);
-        kMeansAlgorithm(frames[0]);
-    }
-    auto minValidity = min_element(begin(validity), end(validity));
-    cout << "best found k: " << *minValidity << endl;
-}
-
-Mat KMeansClus::kMeansAlgorithm(Mat mat) {
+void KMeansClus::kMeansAlgorithm(Mat mat) {
     // the index of this array assigns the pixels of frames[i] to the corresponding clusters
     int changes;
     do
@@ -205,17 +144,91 @@ Mat KMeansClus::kMeansAlgorithm(Mat mat) {
             // cout << "Centers " << i << " H: " << centers[i](0) << " S: " << centers[i](1) << endl;
         }
     } while (changes != 0);
-    // only for test purposes
-    for (int y = 0; y < mat.rows; y++)
+    return;
+}
+
+int KMeansClus::calculateK() {
+    vector<Vec4f> tmp(1);
+    fill (tmp.begin(),tmp.end(),0);
+    centers = tmp;
+    //tmp.clear();
+    vector <float> validity;
+    kMeansAlgorithm(frames[0]);
+    Vec3b minHSV = {255,255,255};
+    Vec3b maxHSV = {0,0,0};
+    for (int k=0; k<kMax; k++)
     {
-        for (int x = 0; x < mat.cols; x++)
+        vector<Vec3f> variance(centers.size());
+        std::fill (variance.begin(),variance.end(),0);
+        // the intraMeassurement
+        float intraMeassure = 0;
+        // the interMeassurement
+        float interMeassure = INT_MAX;
+        for (int y = 0; y < frames[0].rows; y++)
         {
-            Vec3b tmp;
-            tmp(0) = centers[memberOfCluster[y][x]](0);
-            tmp(1) = centers[memberOfCluster[y][x]](1);
-            tmp(2) = centers[memberOfCluster[y][x]](2);
-            mat.at<Vec3b>(y,x) = tmp;
+            for (int x = 0; x < frames[0].cols; x++)
+            {
+                // calculates (x-center)² and intraMeassurement=(sqrt(x-correspondingCenter)²)
+                occCounter = {0,0,0};
+                for (int i = 0; i < 3; i++) {
+                    occCounter[memberOfCluster[y][x]]++;
+                    variance[memberOfCluster[y][x]](i) +=
+                            pow((int) frames[0].at<Vec3b>(y, x)(i) - (int) centers[memberOfCluster[y][x]](i), 2);
+                    if (occCounter[memberOfCluster[y][x]] > 1) variance[memberOfCluster[y][x]] /= 2;
+                    intraMeassure =
+                            sqrt(pow((int) frames[0].at<Vec3b>(y, x)(i) - (int) centers[memberOfCluster[y][x]](i), 2));
+                    if ((int) frames[0].at<Vec3b>(y, x)(i) < minHSV(i)) minHSV(i) = (int) frames[0].at<Vec3b>(y, x)(i);
+                    if ((int) frames[0].at<Vec3b>(y, x)(i) > maxHSV(i)) maxHSV(i) = (int) frames[0].at<Vec3b>(y, x)(i);
+                }
+            }
         }
+        // the actual intraMeassurement
+        intraMeassure /= (float)frames[0].rows * (float)frames[0].cols;
+        vector <float> singleVariance(centers.size());
+        fill(singleVariance.begin(),singleVariance.end(),0);
+        cout << "K: " << k << endl;
+        for (int i=0;i < variance.size(); i++)
+        {
+            float tmp = 0;
+            // divides by the actual numberOfClustermember and adds all to one single Variance
+            for (int j = 0; j < 3; j++) singleVariance[i] += variance[i](j);
+            for (auto it = singleVariance.begin(); it != singleVariance.end(); it++) *it /= 3.0;
+            // calcuated the smallest interMeassurement sqrt((center i - center j)²)
+            for (int j = 0; j < centers.size(); j++)
+            {
+                if (j==i) continue;
+                for (int t = 0; t < 3; t++)
+                {
+                    tmp += sqrt(pow(centers[i](t) - centers[j](t),2));
+                }
+                tmp/=3;
+                if (tmp < interMeassure) interMeassure = tmp;
+            }
+
+        }
+        if (interMeassure == 0) validity.push_back(INT_MAX);
+        else validity.push_back(intraMeassure/interMeassure);
+        int clusterToSplit = 0;
+        for (int i = 0; i < singleVariance.size(); i++)
+            if (singleVariance[i] > singleVariance[clusterToSplit]) clusterToSplit = i;
+        Vec4f newCenter = {0,0,0,0};
+        for (int t = 0; t < 3; t++)
+        {
+            newCenter(t) = centers[clusterToSplit](t)+(float)(minHSV[t]+maxHSV[t])/2.0;
+            centers[clusterToSplit](t) =
+                    (float)((centers[clusterToSplit](t)-maxHSV[t])/2.0);
+            if (centers[clusterToSplit][t] < 0) centers[clusterToSplit][t] = 0;
+            if (newCenter[t] > 255) newCenter[t] = 255;
+        }
+        centers.push_back(newCenter);
+        kMeansAlgorithm(frames[0]);
+        variance.clear();
+        singleVariance.clear();
     }
-    return mat;
+    int minValidity = 1;
+    for (int i = 1; i < validity.size(); i++)
+        if (validity[i]<validity[minValidity]) minValidity = i;
+    cout << "best found k: " << minValidity << endl;
+    validity.clear();
+    return minValidity;
 }
