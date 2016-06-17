@@ -8,11 +8,9 @@
 
 KMeansClus::KMeansClus(vector<Mat> f) {
     frames = f;
-    // generate a 2D dynamic array
-    memberOfCluster = new int*[frames[0].rows];
-    for (int i = 0; i < frames[0].rows; ++i) {
-        memberOfCluster[i] = new int[frames[0].cols];
-    }
+    memberOfCluster.resize(frames[0].rows);
+    for (int i = 0; i < frames[0].rows; ++i)
+        memberOfCluster[i].resize(frames[0].cols);
     for (int y = 0; y < frames[0].rows; y++)
     {
         for (int x = 0; x < frames[0].cols; x++)
@@ -20,17 +18,16 @@ KMeansClus::KMeansClus(vector<Mat> f) {
             memberOfCluster[y][x] = 0;
         }
     }
-    calculateK();
+    clusterVec.resize(1);
+    int k = calculateK();
 }
 KMeansClus::KMeansClus(vector<Mat> f,int k) {
     frames = f;
-    vector<Vec4f> tmp(k);
-    centers = tmp;
-    //generate a 2D dynamic array
-    memberOfCluster = new int*[frames[0].rows];
-    for (int i = 0; i < frames[0].rows; ++i) {
-        memberOfCluster[i] = new int[frames[0].cols];
-    }
+    centers = vector<Vec4f>(k);
+    clusterVec.resize(k);
+    memberOfCluster.resize(frames[0].rows);
+    for (int i = 0; i < frames[0].rows; ++i)
+        memberOfCluster[i].resize(frames[0].cols);
     for (int y = 0; y < frames[0].rows; y++)
     {
         for (int x = 0; x < frames[0].cols; x++)
@@ -50,185 +47,192 @@ KMeansClus::KMeansClus(vector<Mat> f,int k) {
 }
 
 KMeansClus::~KMeansClus() {
-    for (int i = 0; i < frames[0].rows; ++i) {
-        delete memberOfCluster[i];
-    }
-    delete [] memberOfCluster;
-    centers.clear();
-    frames.clear();
-    occCounter.clear();
+    vector<Mat>().swap(frames);
+    vector<Vec4f>().swap(centers);
+    vector<vector<int>>().swap(memberOfCluster);
 }
 
-vector<Mat> KMeansClus::startClustering() {
+void KMeansClus::startClustering() {
     // begin of the loop
     for (int frameCounter = 0; frameCounter < frames.size(); frameCounter++)
     {
         kMeansAlgorithm(frames[frameCounter]);
-        Mat* temp = new Mat(frames[frameCounter].size(),frames[frameCounter].type());
+        Mat temp (frames[frameCounter].size(),frames[frameCounter].type());
+        Vec3b tmp(0,0,0);
         for (int y = 0; y < frames[frameCounter].rows; y++)
         {
             for (int x = 0; x < frames[frameCounter].cols; x++)
             {
-                Vec3b tmp;
                 tmp(0) = centers[memberOfCluster[y][x]](0);
                 tmp(1) = centers[memberOfCluster[y][x]](1);
                 tmp(2) = centers[memberOfCluster[y][x]](2);
-                temp->at<Vec3b>(y,x) = tmp;
+                temp.at<Vec3b>(y,x) = tmp;
             }
         }
         stringstream file;
-        file << "/home/nilus/test/test.jpg" << frameCounter << ".jpg";
-        imwrite(file.str(),*temp);
+        file << "/home/nilus/test/test" << frameCounter << ".jpg";
+        imwrite(file.str(),temp);
         cout << "frame: " <<frameCounter <<" written" << endl;
-        temp->release();
     }
+    return;
 }
 
-void KMeansClus::kMeansAlgorithm(Mat mat) {
+void KMeansClus::kMeansAlgorithm(Mat img) {
     // the index of this array assigns the pixels of frames[i] to the corresponding clusters
     int changes;
     do
     {
         changes = 0;
-        if (centers.size() > 1)
+        Vec3i hsv;
+        for (int y = 0; y < img.rows; y++)
         {
-            for (int y = 0; y < mat.rows; y++)
+            for (int x = 0; x < img.cols; x++)
             {
-                for (int x = 0; x < mat.cols; x++)
+                hsv = img.at<Vec3b>(y, x);
+                int cluster = 0;
+                // using normal euclidian distance
+                float min = Calculator::eucHSVDistance(hsv,centers[0]);
+                for (int i = 1; i < centers.size(); i++)
                 {
-                    Vec3b rgb = mat.at<Vec3b>(y, x);
-                    int h = rgb(0);
-                    int s = rgb(1);
-                    int v = rgb(2);
-                    int cluster = 0;
-                    // using normal euclidian distance
-                    float min = sqrt(pow(centers[0](0) - h, 2) + pow(centers[0](1) - s, 2));
-                    for (int i = 1; i < centers.size(); i++)
+                    float distance = Calculator::eucHSVDistance(hsv,centers[i]);
+                    if (distance < min)
                     {
-                        float distance = sqrt(
-                                pow(centers[i](0) - h, 2) + pow(centers[i](1) - s, 2));
-                        if (distance < min)
-                        {
-                            min = distance;
-                            cluster = i;
-                        }
+                        min = distance;
+                        cluster = i;
                     }
-                    if (memberOfCluster[y][x] != cluster)
-                    {
-                        memberOfCluster[y][x] = cluster;
-                        changes++;
-                    }
+                }
+                if (memberOfCluster[y][x] != cluster)
+                {
+                    memberOfCluster[y][x] = cluster;
+                    changes++;
                 }
             }
         }
         // calculate new centers
-        std::fill(centers.begin(), centers.end(), 0);
-        for (int y = 0; y < mat.rows; y++)
+        vector<Vec4f> newCenters(centers.size());
+        std::fill(newCenters.begin(), newCenters.end(), Vec4f(0,0,0,0));
+        for (int y = 0; y < img.rows; y++)
         {
-            for (int x = 0; x < mat.cols; x++)
+            for (int x = 0; x < img.cols; x++)
             {
                 int cluster = memberOfCluster[y][x];
-                Vec3b tmp = mat.at<Vec3b>(y, x);
-                for (int j = 0; j < 3; j++) centers[cluster](j) += tmp(j);
-                centers[cluster](3)++;
+                Vec3b tmp = img.at<Vec3b>(y, x);
+                newCenters[cluster]+=Vec4f(tmp[0],tmp[1],tmp[2],0);
+                newCenters[cluster](3)++;
             }
         }
         for (int i = 0; i < centers.size(); i++)
         {
             for (int j = 0; j < 3; j++)
             {
-                if (centers[i](3) > 0) centers[i](j) /= centers[i](3);
-                if (centers[i](j) < 0) centers[i](j) = 0;
-                if (centers[i](j) > 255) centers[i](j) = 255;
+                if (newCenters[i](3) > 0) newCenters[i](j) /= newCenters[i](3);
+                if (newCenters[i](j) < 0) newCenters[i](j) = 0;
+                if (newCenters[i](j) > 255) newCenters[i](j) = 255;
             }
-            // cout << "Centers " << i << " H: " << centers[i](0) << " S: " << centers[i](1) << endl;
+            if (newCenters[i](3) > 0) centers[i] = newCenters[i];
+            else centers[i](3)= 0;
         }
     } while (changes != 0);
-    return;
 }
 
 int KMeansClus::calculateK() {
-    vector<Vec4f> tmp(1);
-    fill (tmp.begin(),tmp.end(),0);
-    centers = tmp;
-    //tmp.clear();
-    vector <float> validity;
-    kMeansAlgorithm(frames[0]);
-    Vec3b minHSV = {255,255,255};
-    Vec3b maxHSV = {0,0,0};
-    for (int k=0; k<kMax; k++)
+    Mat img = frames[0];
+    vector<float> validity;
+    // calculate the mean of all values -> the center for cluster 1
+    Vec3f mean= {0,0,0};
+    for(int i = 0; i < img.rows; i++)
     {
-        vector<Vec3f> variance(centers.size());
-        std::fill (variance.begin(),variance.end(),0);
-        // the intraMeassurement
-        float intraMeassure = 0;
-        // the interMeassurement
-        float interMeassure = INT_MAX;
-        for (int y = 0; y < frames[0].rows; y++)
-        {
-            for (int x = 0; x < frames[0].cols; x++)
-            {
-                // calculates (x-center)² and intraMeassurement=(sqrt(x-correspondingCenter)²)
-                occCounter = {0,0,0};
-                for (int i = 0; i < 3; i++) {
-                    occCounter[memberOfCluster[y][x]]++;
-                    variance[memberOfCluster[y][x]](i) +=
-                            pow((int) frames[0].at<Vec3b>(y, x)(i) - (int) centers[memberOfCluster[y][x]](i), 2);
-                    if (occCounter[memberOfCluster[y][x]] > 1) variance[memberOfCluster[y][x]] /= 2;
-                    intraMeassure =
-                            sqrt(pow((int) frames[0].at<Vec3b>(y, x)(i) - (int) centers[memberOfCluster[y][x]](i), 2));
-                    if ((int) frames[0].at<Vec3b>(y, x)(i) < minHSV(i)) minHSV(i) = (int) frames[0].at<Vec3b>(y, x)(i);
-                    if ((int) frames[0].at<Vec3b>(y, x)(i) > maxHSV(i)) maxHSV(i) = (int) frames[0].at<Vec3b>(y, x)(i);
-                }
-            }
+        const Vec3b* mi = img.ptr<Vec3b>(i);
+        cout << "[";
+        for(int j = 0; j < img.cols; j++) {
+            mean += mi[j];
+            cout <<"["<< img.at<Vec3b>(i,j) << "]";
         }
-        // the actual intraMeassurement
-        intraMeassure /= (float)frames[0].rows * (float)frames[0].cols;
-        vector <float> singleVariance(centers.size());
-        fill(singleVariance.begin(),singleVariance.end(),0);
-        cout << "K: " << k << endl;
-        for (int i=0;i < variance.size(); i++)
-        {
-            float tmp = 0;
-            // divides by the actual numberOfClustermember and adds all to one single Variance
-            for (int j = 0; j < 3; j++) singleVariance[i] += variance[i](j);
-            for (auto it = singleVariance.begin(); it != singleVariance.end(); it++) *it /= 3.0;
-            // calcuated the smallest interMeassurement sqrt((center i - center j)²)
-            for (int j = 0; j < centers.size(); j++)
-            {
-                if (j==i) continue;
-                for (int t = 0; t < 3; t++)
-                {
-                    tmp += sqrt(pow(centers[i](t) - centers[j](t),2));
-                }
-                tmp/=3;
-                if (tmp < interMeassure) interMeassure = tmp;
-            }
-
-        }
-        if (interMeassure == 0) validity.push_back(INT_MAX);
-        else validity.push_back(intraMeassure/interMeassure);
-        int clusterToSplit = 0;
-        for (int i = 0; i < singleVariance.size(); i++)
-            if (singleVariance[i] > singleVariance[clusterToSplit]) clusterToSplit = i;
-        Vec4f newCenter = {0,0,0,0};
-        for (int t = 0; t < 3; t++)
-        {
-            newCenter(t) = centers[clusterToSplit](t)+(float)(minHSV[t]+maxHSV[t])/2.0;
-            centers[clusterToSplit](t) =
-                    (float)((centers[clusterToSplit](t)-maxHSV[t])/2.0);
-            if (centers[clusterToSplit][t] < 0) centers[clusterToSplit][t] = 0;
-            if (newCenter[t] > 255) newCenter[t] = 255;
-        }
-        centers.push_back(newCenter);
-        kMeansAlgorithm(frames[0]);
-        variance.clear();
-        singleVariance.clear();
+        cout << endl;
     }
-    int minValidity = 1;
-    for (int i = 1; i < validity.size(); i++)
-        if (validity[i]<validity[minValidity]) minValidity = i;
-    cout << "best found k: " << minValidity << endl;
-    validity.clear();
-    return minValidity;
+    mean /= (float(img.rows)*float(img.cols));
+    centers.push_back(Vec4f{mean[0],mean[1],mean[2],img.rows*img.cols});
+    // begin the loop to split the center with highest variance
+    for (int k = 1; k < kMax; k++)
+    {
+        cout << "K: " << k << endl;
+        // calculate the variance of the clusters
+        vector <Vec3f> variance(centers.size());
+        vector <Vec3i> minHSV(centers.size());
+        vector <Vec3i> maxHSV(centers.size());
+        for (auto it=variance.begin(); it != variance.end(); ++it) *it = Vec3f(0,0,0);
+        for (auto it=minHSV.begin(); it != minHSV.end(); ++it) *it = Vec3i(255,255,255);
+        for (auto it=maxHSV.begin(); it != maxHSV.end(); ++it) *it = Vec3i(0,0,0);
+        for (int y = 0; y < img.rows; y++)
+        {
+            for (int x = 0; x < img.cols; x++)
+            {
+                int cluster = memberOfCluster[y][x];
+                variance[cluster] += Calculator::variance(img.at<Vec3b>(y,x),centers[cluster]);
+                for (int i = 0; i < 3; i++) {
+                    if (img.at<Vec3b>(y,x)[i] < minHSV[cluster][i]) minHSV[cluster][i] = img.at<Vec3b>(y,x)[i];
+                    if (img.at<Vec3b>(y,x)[i] > maxHSV[cluster][i]) maxHSV[cluster][i] = img.at<Vec3b>(y,x)[i];
+                }
+            }
+        }
+        vector <float> singleVariance(variance.size());
+        fill(singleVariance.begin(),singleVariance.end(),0);
+        for (int i = 0; i < centers.size(); i++) {
+            variance[i] /= centers[i][3];
+            // should be < 3 for RGB
+            for (int j = 0; j < 2; j++) singleVariance[i]+=variance[i][j];
+        }
+        // divided by 3 for RGB
+        float maxVariance = 0;
+        int clusterToSplit = 0;
+        for (int i = 0; i < singleVariance.size(); i++) {
+            singleVariance[i]/=2;
+            if (singleVariance[i]>maxVariance) clusterToSplit = i;
+        }
+        // calculate the new clusters centers
+        Vec3f oldClusterCenter =
+                Vec3f(centers[clusterToSplit][0],centers[clusterToSplit][1],centers[clusterToSplit][2]);
+        Vec3f a = (oldClusterCenter-(Vec3f)maxHSV[clusterToSplit])/2;
+        Vec3f newClusterCenter = oldClusterCenter - a;
+        centers[clusterToSplit] = Vec4f(newClusterCenter.val[0],newClusterCenter.val[1],newClusterCenter.val[2],0);
+        newClusterCenter = oldClusterCenter + a;
+        centers.push_back(Vec4f(newClusterCenter.val[0],newClusterCenter.val[1],newClusterCenter.val[2],0));
+        for (int i = 0; i < 3; i++) {
+            int test = centers.size();
+            if (centers[clusterToSplit][i] < 0 ) centers[clusterToSplit][i] = 0;
+            if (centers[centers.size()-1][i] < 0 ) centers[centers.size()-1][i] = 0;
+            if (centers[clusterToSplit][i] > 255 ) centers[clusterToSplit][i] = 255;
+            if (centers[centers.size()-1][i] > 255 ) centers[centers.size()-1][i] = 255;
+        }
+        // reuse the kMeans algorithm
+        kMeansAlgorithm(img);
+        float intraMeassure = 0;
+        for(int y = 0; y < img.rows; y++) {
+            for (int x = 0; x < img.cols; x++) {
+                intraMeassure += Calculator::eucHSVDistance(img.at<Vec3b>(y,x),centers[memberOfCluster[y][x]]);
+            }
+        }
+        intraMeassure /= img.rows*img.cols;
+        float interMeassure = Calculator::eucHSVDistance(centers[0],centers[1]);
+        for (int i = 0; i < centers.size(); i++) {
+            for (int j = 0; j < centers.size(); j++) {
+                if (j==i) continue;
+                float distance = Calculator::eucHSVDistance(centers[i],centers[j]);
+                if (distance < interMeassure) interMeassure = distance;
+            }
+        }
+        // the actual validity, note: if max at validity[0] --> k=2
+        validity.push_back(intraMeassure/interMeassure);
+        cout << "test" << endl;
+    }
+    int bestk = 2;
+    float minValidity = validity[0];
+    for (int i = 0; i <validity.size(); i++) {
+        if (validity[i] < minValidity) {
+            minValidity = validity[i];
+            bestk = i+2;
+        }
+    }
+    cout << "best k: " << bestk << endl;
+    return bestk;
 }

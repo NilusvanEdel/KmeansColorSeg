@@ -24,7 +24,7 @@ private:
     // the filelocation where the image will be stored (if decommented)
     string filedest;
     double fps;
-    vector<Mat> frame;
+    vector<Mat> frames;
     // for debugging, returns the type of img as string
     string type2str(int type);
 };

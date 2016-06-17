@@ -7,6 +7,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <iostream>
 #include <string>
+#include "Calculator.hpp"
 
 using namespace std;
 using namespace cv;
@@ -18,7 +19,7 @@ public:
     // Constructor with given k-number
     KMeansClus(vector<Mat> f, int k);
     ~KMeansClus();
-    vector<Mat> startClustering();
+    void startClustering();
 private:
     // vector including all Matrices of the frames
     vector<Mat> frames;
@@ -27,11 +28,13 @@ private:
     // calculate the optimal value of k
     int calculateK();
     // the actual kMeans algorithm
-    void kMeansAlgorithm(Mat mat);
+    void kMeansAlgorithm(Mat img);
     // maximal k
     const int kMax = 25;
-    int** memberOfCluster;
-    vector <int> occCounter;
+    vector <vector<int>> memberOfCluster;
+    vector <vector<Vec3f>> clusterVec;
+    // calculates the mean of matrix
+    Vec3f meanCalculator(Mat matrix);
 };
 
 #endif //NAIVEAPPROACHKMEANSCSEG_KMEANS_HPP

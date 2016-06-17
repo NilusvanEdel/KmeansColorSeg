@@ -17,10 +17,7 @@ VideoCapturer::VideoCapturer(string filen, string filed)
 }
 VideoCapturer::~VideoCapturer()
 {
-    for (auto it=frame.begin(); it != frame.end(); it++)
-    {
-        it->release();
-    }
+    vector<Mat>().swap(frames);
 }
 int VideoCapturer::readVideo()
 {
@@ -43,9 +40,10 @@ int VideoCapturer::readVideo()
 
 vector<Mat> VideoCapturer::readFrames()
 {
+    int counter = 0;
     while(1)
         {
-            // stringstream file;
+            stringstream file;
             Mat tmp;
             cap.read(tmp);
             if(tmp.empty()) {
@@ -53,18 +51,18 @@ vector<Mat> VideoCapturer::readFrames()
             break;
             }
             cvtColor(tmp, tmp, COLOR_BGR2HSV);
-            frame.push_back(tmp);
+            frames.push_back(tmp);
             //save frames as jpeg
-            /* file << filedest << counter << ".jpg";
-            imwrite(file.str(),frame[counter]);
-             */
+            file << filedest << "original" << counter << ".jpg";
+            imwrite(file.str(),frames[counter]);
+            counter++;
             if(waitKey(30) == 27) //wait for 'esc' key press for 30 ms. If 'esc' key is pressed, break loop
             {
                 cout << "esc key is pressed by user" << endl;
                 break;
         }
     }
-    return frame;
+    return frames;
 }
 
 string VideoCapturer::type2str(int type) {

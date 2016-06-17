@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.3)
 project(naiveApproachKMeansCSeg)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g")
 find_package( OpenCV REQUIRED )
-set(SOURCE_FILES Main.cpp VideoCapturer.hpp VideoCapturer.cpp KMeansClus.cpp KMeansClus.hpp)
+set(SOURCE_FILES Main.cpp VideoCapturer.hpp VideoCapturer.cpp KMeansClus.cpp KMeansClus.hpp Calculator.cpp Calculator.hpp)
 
 add_executable(naiveApproachKMeansCSeg ${SOURCE_FILES})
 
