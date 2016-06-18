@@ -15,9 +15,9 @@ class KMeansClus
 {
 public:
     // Constructor where the optimal number of k is calculated automatically
-    KMeansClus(vector<Mat> f);
+    KMeansClus(vector<Mat> f, Calculator* calculator);
     // Constructor with given k-number
-    KMeansClus(vector<Mat> f, int k);
+    KMeansClus(vector<Mat> f, int k, Calculator* calculator);
     ~KMeansClus();
     void startClustering();
 private:
@@ -35,6 +35,7 @@ private:
     vector <vector<Vec3f>> clusterVec;
     // calculates the mean of matrix
     Vec3f meanCalculator(Mat matrix);
+    Calculator* calculator;
 };
 
 #endif //NAIVEAPPROACHKMEANSCSEG_KMEANS_HPP

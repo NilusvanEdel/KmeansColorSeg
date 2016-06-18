@@ -8,12 +8,13 @@
 using namespace cv;
 using namespace std;
 
-VideoCapturer::VideoCapturer(string filen, string filed)
+VideoCapturer::VideoCapturer(string filen, string filed, bool hsv)
 {
     filename = filen;
     filedest = filed;
     double fps = 0;
     VideoCapture cap;
+    this->hsv=hsv;
 }
 VideoCapturer::~VideoCapturer()
 {
@@ -50,7 +51,7 @@ vector<Mat> VideoCapturer::readFrames()
             //cout << "scanned all frames" << endl;
             break;
             }
-            cvtColor(tmp, tmp, COLOR_BGR2HSV);
+            if (hsv) cvtColor(tmp, tmp, COLOR_BGR2HSV);
             frames.push_back(tmp);
             //save frames as jpeg
             file << filedest << "original" << counter << ".jpg";

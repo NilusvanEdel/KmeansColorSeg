@@ -6,7 +6,8 @@
 #include <random>
 #include <opencv2/imgproc.hpp>
 
-KMeansClus::KMeansClus(vector<Mat> f) {
+KMeansClus::KMeansClus(vector<Mat> f, Calculator* calculator) {
+    this->calculator = calculator;
     frames = f;
     memberOfCluster.resize(frames[0].rows);
     for (int i = 0; i < frames[0].rows; ++i)
@@ -19,9 +20,11 @@ KMeansClus::KMeansClus(vector<Mat> f) {
         }
     }
     clusterVec.resize(1);
-    int k = calculateK();
+    calculateK();
+
 }
-KMeansClus::KMeansClus(vector<Mat> f,int k) {
+KMeansClus::KMeansClus(vector<Mat> f,int k, Calculator* calculator) {
+    this->calculator = calculator;
     frames = f;
     centers = vector<Vec4f>(k);
     clusterVec.resize(k);
@@ -91,10 +94,10 @@ void KMeansClus::kMeansAlgorithm(Mat img) {
                 hsv = img.at<Vec3b>(y, x);
                 int cluster = 0;
                 // using normal euclidian distance
-                float min = Calculator::eucHSVDistance(hsv,centers[0]);
+                float min = calculator->distance(hsv,centers[0]);
                 for (int i = 1; i < centers.size(); i++)
                 {
-                    float distance = Calculator::eucHSVDistance(hsv,centers[i]);
+                    float distance = calculator->distance(hsv,centers[i]);
                     if (distance < min)
                     {
                         min = distance;
@@ -140,15 +143,14 @@ int KMeansClus::calculateK() {
     vector<float> validity;
     // calculate the mean of all values -> the center for cluster 1
     Vec3f mean= {0,0,0};
+    // the calculated centers for each iteration are stored in this vector
+    vector<vector <Vec4f>> bestCenters;
     for(int i = 0; i < img.rows; i++)
     {
         const Vec3b* mi = img.ptr<Vec3b>(i);
-        cout << "[";
         for(int j = 0; j < img.cols; j++) {
             mean += mi[j];
-            cout <<"["<< img.at<Vec3b>(i,j) << "]";
         }
-        cout << endl;
     }
     mean /= (float(img.rows)*float(img.cols));
     centers.push_back(Vec4f{mean[0],mean[1],mean[2],img.rows*img.cols});
@@ -168,7 +170,7 @@ int KMeansClus::calculateK() {
             for (int x = 0; x < img.cols; x++)
             {
                 int cluster = memberOfCluster[y][x];
-                variance[cluster] += Calculator::variance(img.at<Vec3b>(y,x),centers[cluster]);
+                variance[cluster] += calculator->variance(img.at<Vec3b>(y,x),centers[cluster]);
                 for (int i = 0; i < 3; i++) {
                     if (img.at<Vec3b>(y,x)[i] < minHSV[cluster][i]) minHSV[cluster][i] = img.at<Vec3b>(y,x)[i];
                     if (img.at<Vec3b>(y,x)[i] > maxHSV[cluster][i]) maxHSV[cluster][i] = img.at<Vec3b>(y,x)[i];
@@ -209,30 +211,50 @@ int KMeansClus::calculateK() {
         float intraMeassure = 0;
         for(int y = 0; y < img.rows; y++) {
             for (int x = 0; x < img.cols; x++) {
-                intraMeassure += Calculator::eucHSVDistance(img.at<Vec3b>(y,x),centers[memberOfCluster[y][x]]);
+                intraMeassure += calculator->distance(img.at<Vec3b>(y,x),centers[memberOfCluster[y][x]]);
             }
         }
         intraMeassure /= img.rows*img.cols;
-        float interMeassure = Calculator::eucHSVDistance(centers[0],centers[1]);
+        float interMeassure = calculator->distance(centers[0],centers[1]);
         for (int i = 0; i < centers.size(); i++) {
             for (int j = 0; j < centers.size(); j++) {
                 if (j==i) continue;
-                float distance = Calculator::eucHSVDistance(centers[i],centers[j]);
+                float distance = calculator->distance(centers[i],centers[j]);
                 if (distance < interMeassure) interMeassure = distance;
             }
         }
         // the actual validity, note: if max at validity[0] --> k=2
-        validity.push_back(intraMeassure/interMeassure);
-        cout << "test" << endl;
+        float currentValidity = intraMeassure/interMeassure;
+        bestCenters.push_back(centers);
+        validity.push_back(currentValidity);
     }
-    int bestk = 2;
-    float minValidity = validity[0];
-    for (int i = 0; i <validity.size(); i++) {
-        if (validity[i] < minValidity) {
-            minValidity = validity[i];
-            bestk = i+2;
+    // best K is the minimal value after the first local Maximum
+    int bestK, biasedBestK= 2;
+    float minValidity, biasedMinValidity = validity[0];
+    bool locMax = false;
+    // find the best K
+    if (validity.size()>1) {
+        for (int i = 1; i < validity.size(); i++) {
+            if (!(i == validity.size()-1) && !locMax)
+                if (validity[i-1] < validity[i] && validity[i]  > validity[i+1]) {
+                    locMax = true;
+                    minValidity = validity[i];
+                }
+            if (!locMax && validity[i] < biasedMinValidity) {
+                biasedBestK = i+2;
+                biasedMinValidity = validity[i];
+            }
+            if (locMax && validity[i] < minValidity) {
+                bestK = i+2;
+                minValidity = validity[i];
+            }
+        }
+        if (!locMax) {
+            minValidity = biasedMinValidity;
+            bestK = biasedBestK;
         }
     }
-    cout << "best k: " << bestk << endl;
-    return bestk;
+    centers = bestCenters[bestK-2];
+    cout << "best k: " << bestK << endl;
+    return bestK;
 }

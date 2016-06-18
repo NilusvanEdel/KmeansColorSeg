@@ -13,7 +13,7 @@ using namespace cv;
 class VideoCapturer
 {
 public:
-    VideoCapturer(string filen, string filed);
+    VideoCapturer(string filen, string filed, bool hsv);
     ~VideoCapturer();
     VideoCapture cap;
     int readVideo();
@@ -27,6 +27,7 @@ private:
     vector<Mat> frames;
     // for debugging, returns the type of img as string
     string type2str(int type);
+    bool hsv;
 };
 
 
