@@ -5,6 +5,8 @@
 #include "KMeansClus.hpp"
 #include <random>
 #include <opencv2/imgproc.hpp>
+#include "HSVEucCalculator.hpp"
+#include <typeinfo>
 
 KMeansClus::KMeansClus(vector<Mat> f, Calculator* calculator) {
     this->calculator = calculator;
@@ -181,14 +183,14 @@ int KMeansClus::calculateK() {
         fill(singleVariance.begin(),singleVariance.end(),0);
         for (int i = 0; i < centers.size(); i++) {
             variance[i] /= centers[i][3];
-            // should be < 3 for RGB
-            for (int j = 0; j < 2; j++) singleVariance[i]+=variance[i][j];
+            for (int j = 0; j < 3; j++) singleVariance[i]+=variance[i][j];
         }
         // divided by 3 for RGB
         float maxVariance = 0;
         int clusterToSplit = 0;
         for (int i = 0; i < singleVariance.size(); i++) {
-            singleVariance[i]/=2;
+            if (typeid(*calculator) == typeid(*(new HSVEucCalculator))) singleVariance[i]/=2;
+            else singleVariance[i]/=3;
             if (singleVariance[i]>maxVariance) clusterToSplit = i;
         }
         // calculate the new clusters centers
@@ -216,15 +218,16 @@ int KMeansClus::calculateK() {
         }
         intraMeassure /= img.rows*img.cols;
         float interMeassure = calculator->distance(centers[0],centers[1]);
-        for (int i = 0; i < centers.size(); i++) {
-            for (int j = 0; j < centers.size(); j++) {
+        for (int i = 1; i < centers.size(); i++) {
+            for (int j = 1; j < centers.size(); j++) {
                 if (j==i) continue;
                 float distance = calculator->distance(centers[i],centers[j]);
                 if (distance < interMeassure) interMeassure = distance;
             }
         }
         // the actual validity, note: if max at validity[0] --> k=2
-        float currentValidity = intraMeassure/interMeassure;
+        float currentValidity = INT_MAX;
+        if (interMeassure!=0) currentValidity = intraMeassure/interMeassure;
         bestCenters.push_back(centers);
         validity.push_back(currentValidity);
     }

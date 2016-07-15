@@ -6,11 +6,12 @@
 #include "Calculator.hpp"
 #include "HSVEucCalculator.hpp"
 #include "EuclidianCalculator.hpp"
+#include "CosineCalculator.hpp"
 
 
 int main(int argc, char* argv[])
 {
-    VideoCapturer vidCap("/home/nilus/Videos/ownSample.avi","/home/nilus/test/", true);
+    VideoCapturer vidCap("/home/nilus/Videos/test_case1.gif","/home/nilus/test/", true);
     if (vidCap.readVideo() == -1) return -1;
     else
     {
