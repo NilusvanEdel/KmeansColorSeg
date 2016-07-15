@@ -12,19 +12,32 @@
 using namespace std;
 using namespace cv;
 
+typedef Vec<float, 5> Vec5f;
+typedef Vec<float, 6> Vec6f;
+typedef Vec<int, 5> Vec5i;
+typedef Vec<int, 5> Vec5i;
 
 class Calculator {
 
 public:
     virtual ~Calculator()  {}
-    virtual float distance(Vec3f vec1, Vec3f vec2) = 0;
-    virtual float distance(Vec3f vec1, Vec4f vec2) = 0;
-    virtual float distance(Vec4f vec1, Vec4f vec2) = 0;
-    virtual float distance(Vec4f vec1, Vec3f vec2) = 0;
+    virtual float distance(Vec5f vec1, Vec5f vec2) = 0;
+    virtual float distance(Vec5f vec1, Vec6f vec2) = 0;
+    virtual float distance(Vec6f vec1, Vec6f vec2) = 0;
+    virtual float distance(Vec6f vec1, Vec5f vec2) = 0;
 
-    virtual Vec3f variance(Vec3f vec1, Vec3f vec2) = 0;
-    virtual Vec3f variance(Vec4f vec1, Vec3f vec2) = 0;
-    virtual Vec3f variance(Vec3f vec1, Vec4f vec2) = 0;
+    virtual Vec5f variance(Vec5f vec1, Vec5f vec2) = 0;
+    virtual Vec5f variance(Vec6f vec1, Vec5f vec2) = 0;
+    virtual Vec5f variance(Vec5f vec1, Vec6f vec2) = 0;
+
+    virtual float singleVariance(Vec5f vector, Vec6f meanVec) = 0;
+
+    virtual int getMaxX() = 0;
+    virtual int getMaxY() = 0;
+private:
+    int maxColorDis;
+    int maxX;
+    int maxY;
 };
 
 #endif //NAIVEAPPROACHKMEANSCSEG_CALCULATOR_HPP

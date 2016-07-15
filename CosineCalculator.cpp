@@ -4,8 +4,8 @@
 
 #include "CosineCalculator.hpp"
 
-CosineCalculator::CosineCalculator() {
-    eucCalc = new EuclidianCalculator();
+CosineCalculator::CosineCalculator(int maxColorDis, int maxX, int maxY) {
+    eucCalc = new EuclidianCalculator(maxColorDis, maxX, maxY);
 }
 float CosineCalculator::distance(Vec3f vec1, Vec3f vec2) {
     float counter = 0;

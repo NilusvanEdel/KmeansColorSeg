@@ -11,18 +11,22 @@
 
 class CosineCalculator : public Calculator{
 public:
-    CosineCalculator();
+    CosineCalculator(int maxColorDis, int maxX, int maxY);
     ~CosineCalculator() {}
-    float distance(Vec3f vec1, Vec3f vec2);
-    float distance(Vec3f vec1, Vec4f vec2);
-    float distance(Vec4f vec1, Vec4f vec2);
-    float distance(Vec4f vec1, Vec3f vec2);
+    float distance(Vec5f vec1, Vec5f vec2);
+    float distance(Vec5f vec1, Vec6f vec2);
+    float distance(Vec6f vec1, Vec6f vec2);
+    float distance(Vec6f vec1, Vec5f vec2);
 
-    Vec3f variance(Vec3f vec1, Vec3f vec2);
-    Vec3f variance(Vec4f vec1, Vec3f vec2);
-    Vec3f variance(Vec3f vec1, Vec4f vec2);
+    Vec5f variance(Vec5f vec1, Vec5f vec2);
+    Vec5f variance(Vec6f vec1, Vec5f vec2);
+    Vec5f variance(Vec5f vec1, Vec6f vec2);
 private:
     EuclidianCalculator* eucCalc;
+    // the maximal possible distances for maxColorDis and maxPixelDis
+    int maxColorDis;
+    int maxX;
+    int maxY;
 
 };
 
