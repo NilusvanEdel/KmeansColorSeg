@@ -98,12 +98,6 @@ void KMeansClus::kMeansAlgorithm(Mat img) {
                 ColorAndPixelSpace[4] = x;
                 ColorAndPixelSpace[5] = y;
                 int cluster = 0;
-                if (y == 490 && x == 2)
-                {
-                    cout << tmp << endl;
-                    cout << calculator->getMaxX() << "   "<< calculator->getMaxY() << endl;
-                    cout << " hier " << endl;
-                }
                 float min = calculator->distance((Vec5f)ColorAndPixelSpace,centers[0]);
                 for (int i = 1; i < centers.size(); i++)
                 {
@@ -150,6 +144,7 @@ void KMeansClus::kMeansAlgorithm(Mat img) {
         if (counter > 10) limitChanges = pow(limitChanges,2);
     } while (changes > limitChanges);
 }
+
 
 int KMeansClus::calculateK(Mat img) {
     vector<float> validity;
@@ -205,11 +200,10 @@ int KMeansClus::calculateK(Mat img) {
             }
         }
         // calculate the singleVariance out of the variances for each attribute
-        //todo check it
         vector <float> singleVariance(variance.size());
         fill(singleVariance.begin(),singleVariance.end(),0);
         for (int i = 0; i < centers.size(); i++) {
-            singleVariance[i]+=calculator->singleVariance(variance[i], centers[i]);
+            singleVariance[i]+=calculator->singleVariance(variance[i]);
         }
         float maxVariance = 0;
 
@@ -218,14 +212,14 @@ int KMeansClus::calculateK(Mat img) {
             if (singleVariance[i]>maxVariance) clusterToSplit = i;
         }
         // calculate the new clusters centers
-        Vec5f oldClusterCenter =
+        Vec5f oldCCenter =
                 Vec5f(centers[clusterToSplit][0],centers[clusterToSplit][1],centers[clusterToSplit][2],
                       centers[clusterToSplit][3],centers[clusterToSplit][4]);
-        Vec5f a = (oldClusterCenter-(Vec5f) maxColAndPixSpace[clusterToSplit]) / 2;
-        Vec5f newClusterCenter = oldClusterCenter - a;
+        Vec5f a = (oldCCenter - (Vec5f)maxColAndPixSpace[clusterToSplit])/2;
+        Vec5f newClusterCenter = oldCCenter - a;
         centers[clusterToSplit] = Vec6f(newClusterCenter.val[0],newClusterCenter.val[1],newClusterCenter.val[2],
                                         newClusterCenter.val[3],newClusterCenter.val[4],0);
-        newClusterCenter = oldClusterCenter + a;
+        newClusterCenter = oldCCenter + a;
         centers.push_back(Vec6f(newClusterCenter.val[0],newClusterCenter.val[1],newClusterCenter.val[2],
                                 newClusterCenter.val[3],newClusterCenter.val[4],0));
         // the new clusters may not exceed the limits

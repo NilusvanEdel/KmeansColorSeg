@@ -16,6 +16,7 @@ public:
     float distance(Vec6f vec1, Vec6f vec2);
     float distance(Vec6f vec1, Vec5f vec2);
 
+
     Vec5f variance(Vec5f vec1, Vec6f vec2);
     Vec5f variance(Vec6f vec1, Vec5f vec2);
 
@@ -24,8 +25,7 @@ public:
      * for each attribute I define the maximal possible Variance with regards to the mean as 100%
      * hence the single variance = sum of (variance[i]/(maxVariance[i]/100)) for all i
     */
-    float singleVariance(Vec5f vector, Vec6f meanVec);
-    float singleVariance(Vec6f meanVec, Vec5f vector);
+    float singleVariance(Vec5f vector);
 
     int getMaxX() { return maxX; }
     int getMaxY() { return maxY; }
