@@ -16,9 +16,8 @@ public:
     float distance(Vec6f vec1, Vec6f vec2);
     float distance(Vec6f vec1, Vec5f vec2);
 
-    Vec5f variance(Vec5f vec1, Vec5f vec2);
-    Vec5f variance(Vec6f vec1, Vec5f vec2);
     Vec5f variance(Vec5f vec1, Vec6f vec2);
+    Vec5f variance(Vec6f vec1, Vec5f vec2);
 
     /* combines the variances of each attribute into a single one
      * the problem is to mash the two metrices (collorSpace and pixelSpace) together
@@ -26,6 +25,7 @@ public:
      * hence the single variance = sum of (variance[i]/(maxVariance[i]/100)) for all i
     */
     float singleVariance(Vec5f vector, Vec6f meanVec);
+    float singleVariance(Vec6f meanVec, Vec5f vector);
 
     int getMaxX() { return maxX; }
     int getMaxY() { return maxY; }

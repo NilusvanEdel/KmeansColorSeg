@@ -4,6 +4,7 @@
 
 #include <opencv2/imgproc.hpp>
 #include "VideoCapturer.hpp"
+#include "Printer.hpp"
 
 using namespace cv;
 using namespace std;
@@ -33,7 +34,7 @@ int VideoCapturer::readVideo()
 
     //cap.set(CV_CAP_PROP_POS_MSEC, 300); //start the video at 300ms
 
-    fps = cap.get(CV_CAP_PROP_FPS); //get the frames per seconds of the video
+    // fps = cap.get(CV_CAP_PROP_FPS); //get the frames per seconds of the video
 
     // cout << "Frame per seconds : " << fps << endl;
     return 0;
@@ -44,18 +45,18 @@ vector<Mat> VideoCapturer::readFrames()
     int counter = 0;
     while(1)
         {
-            stringstream file;
             Mat tmp;
-            cap.read(tmp);
+            cap >> tmp;
             if(tmp.empty()) {
             //cout << "scanned all frames" << endl;
             break;
             }
-            if (hsv) cvtColor(tmp, tmp, COLOR_BGR2HSV);
+            //if (hsv) cvtColor(tmp, tmp, COLOR_BGR2HSV);
             frames.push_back(tmp);
             //save frames as jpeg
-            file << filedest << "original" << counter << ".jpg";
-            imwrite(file.str(),frames[counter]);
+            stringstream filename;
+            filename << "original" << counter;
+            Printer::printImg(frames[counter],filename.str());
             counter++;
             if(waitKey(30) == 27) //wait for 'esc' key press for 30 ms. If 'esc' key is pressed, break loop
             {

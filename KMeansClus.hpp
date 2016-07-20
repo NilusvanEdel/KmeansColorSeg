@@ -15,9 +15,9 @@ class KMeansClus
 {
 public:
     // Constructor where the optimal number of k is calculated automatically
-    KMeansClus(vector<Mat> f, Calculator* calculator, bool realVid);
+    KMeansClus(vector<Mat> frames, Calculator* calculator, bool realVid);
     // Constructor with given k-number
-    KMeansClus(vector<Mat> f, int k, Calculator* calculator, bool realVid);
+    KMeansClus(vector<Mat> frames, int k, Calculator* calculator, bool realVid);
     ~KMeansClus();
     void startClustering();
 private:
@@ -26,11 +26,12 @@ private:
     // vector with the int of the color of clustercenters[0-2],centers[3]=x,centers[4]=y,centers[5]=memberCount
     vector<Vec6f> centers;
     // calculate the optimal value of k
-    int calculateK();
+    int calculateK(Mat img);
     // the actual kMeans algorithm
     void kMeansAlgorithm(Mat img);
     // maximal k
-    const int kMax = 25;
+    const int kMax = 8;
+    // the index of this vectors assigns clusters to the corresponding coordinates in the particular image
     vector <vector<int>> memberOfCluster;
     // calculates the mean of matrix
     Vec3f meanCalculator(Mat matrix);

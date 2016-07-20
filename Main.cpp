@@ -11,13 +11,13 @@
 
 int main(int argc, char* argv[])
 {
-    VideoCapturer vidCap("/home/nilus/Videos/ownSample.avi","/home/nilus/test/",false);
+    VideoCapturer vidCap("/home/nilus/Bilder/005.png","/home/nilus/test/",false);
     if (vidCap.readVideo() == -1) return -1;
     else
     {
         std::vector<Mat> frames = vidCap.readFrames();
-        Calculator* calculator = new EuclidianCalculator(frames[0].cols,frames[0].rows);
-        KMeansClus kmeans(frames, calculator, false);
+        Calculator* calculator = new EuclidianCalculator(frames[0].rows,frames[0].cols);
+        KMeansClus kmeans(frames, calculator, true);
         kmeans.startClustering();
     }
 
