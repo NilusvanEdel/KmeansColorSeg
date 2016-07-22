@@ -5,7 +5,7 @@
 #include "HSVEucCalculator.hpp"
 
 HSVEucCalculator::HSVEucCalculator(int maxX, int maxY) {
-    eucCalc = new EuclidianCalculator(maxX, maxY);
+    eucCalc = new EuclidianCalculator();
 }
 
 float HSVEucCalculator::distance(Vec5f vec1, Vec5f vec2) {

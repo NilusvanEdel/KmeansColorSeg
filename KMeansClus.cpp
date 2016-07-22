@@ -3,10 +3,8 @@
 //
 
 #include "KMeansClus.hpp"
-#include <random>
-#include <opencv2/imgproc.hpp>
-#include "HSVEucCalculator.hpp"
 #include "Printer.hpp"
+#include "CoordEucCalculator.hpp"
 
 typedef Vec<float, 5> Vec5f;
 typedef Vec<float, 6> Vec6f;
@@ -69,7 +67,7 @@ void KMeansClus::startClustering() {
     // begin of the loop
     for (int frameCounter = 0; frameCounter < frames.size(); frameCounter++)
     {
-        kMeansAlgorithm(frames[frameCounter]);
+        kMeansAlgorithm(frames[frameCounter], -1);
         stringstream filename;
         filename << "clustered" << frameCounter;
         Printer::printImg(frames[frameCounter],filename.str(),memberOfCluster,centers);
@@ -78,7 +76,11 @@ void KMeansClus::startClustering() {
     return;
 }
 
-void KMeansClus::kMeansAlgorithm(Mat img) {
+void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit) {
+    Calculator* calculator = this->calculator;
+    if (clusterToSplit != -1) {
+        calculator = new CoordEucCalculator(calculator->getMaxX(),calculator->getMaxY());
+    }
     // the index of this array assigns the pixels of frames[i] to the corresponding clusters
     int changes;
     float limitChanges = (float)(img.cols*img.rows);
@@ -89,24 +91,33 @@ void KMeansClus::kMeansAlgorithm(Mat img) {
         counter ++;
         changes = 0;
         Vec5i ColorAndPixelSpace;
-        for (int y = 0; y < frames[0].cols; y++)
+        for (int y = 0; y < img.cols; y++)
         {
-            for (int x = 0; x < frames[0].rows; x++)
+            for (int x = 0; x < img.rows; x++)
             {
+                if ((clusterToSplit != -1) &&
+                    !(memberOfCluster[x][y] == clusterToSplit || memberOfCluster[x][y] == centers.size()) ) continue;
                 Vec3b tmp = img.at<Vec3b>(x, y);
                 for (int i = 0; i < 3; i++) ColorAndPixelSpace[i]=(int)tmp[i];
-                ColorAndPixelSpace[4] = x;
-                ColorAndPixelSpace[5] = y;
+                ColorAndPixelSpace[3] = x;
+                ColorAndPixelSpace[4] = y;
                 int cluster = 0;
-                float min = calculator->distance((Vec5f)ColorAndPixelSpace,centers[0]);
-                for (int i = 1; i < centers.size(); i++)
-                {
-                    float distance = calculator->distance(ColorAndPixelSpace,centers[i]);
-                    if (distance < min)
+                if (clusterToSplit != -1)  cluster = clusterToSplit;
+                float min = calculator->distance((Vec5f)ColorAndPixelSpace,centers[cluster]);
+                if (clusterToSplit == -1) {
+                    for (int i = 1; i < centers.size(); i++)
                     {
-                        min = distance;
-                        cluster = i;
+                        float distance = calculator->distance(ColorAndPixelSpace,centers[i]);
+                        if (distance < min)
+                        {
+                            min = distance;
+                            cluster = i;
+                        }
                     }
+                }
+                else {
+                    if (calculator->distance(ColorAndPixelSpace,centers[centers.size()-1]) < min)
+                        cluster = centers.size()-1;
                 }
                 if (memberOfCluster[x][y] != cluster)
                 {
@@ -118,9 +129,9 @@ void KMeansClus::kMeansAlgorithm(Mat img) {
         // calculate new centers
         vector<Vec6f> newCenters(centers.size());
         std::fill(newCenters.begin(), newCenters.end(), Vec6f(0,0,0,0,0,0));
-        for (int y = 0; y < frames[0].cols; y++)
+        for (int y = 0; y < img.cols; y++)
         {
-            for (int x = 0; x < frames[0].rows; x++)
+            for (int x = 0; x < img.rows; x++)
             {
                 int cluster = memberOfCluster[x][y];
                 Vec3b tmp = img.at<Vec3b>(x, y);
@@ -251,7 +262,7 @@ int KMeansClus::calculateK(Mat img) {
             }
         }
         // reuse the kMeans algorithm and calculate the new intra and inter meassurments
-        kMeansAlgorithm(img);
+        kMeansAlgorithm(img, -1);
         Printer::debugPrintImg(img, "testForK_", k+1, memberOfCluster, centers);
         float intraMeassure = 0;
         for (int y = 0; y < frames[0].cols; y++)
@@ -276,6 +287,11 @@ int KMeansClus::calculateK(Mat img) {
         if (interMeassure!=0) currentValidity = intraMeassure/interMeassure;
         //save current center
         bestCenters.push_back(centers);
+        if (validity.size()>2) {
+            if (currentValidity == validity[validity.size() - 1] &&
+                currentValidity == validity[validity.size() - 2])
+                break;
+        }
         validity.push_back(currentValidity);
     }
     // best K is the minimal value after the first local Maximum
@@ -321,6 +337,26 @@ int KMeansClus::calculateK(Mat img) {
         }
     }
     centers = bestCenters[bestK-2];
-    cout << "best k: " << bestK << endl;
+    cout << "best k before NeighborCheck: " << bestK << endl;
+    centers[2][3] = 2;
+    centers[2][4] = 8;
+    centers.push_back(Vec6f(centers[2][0],centers[2][1],centers[2][2],11,0,0));
+    kMeansAlgorithm(img,2);
+    Printer::debugPrintImg(img, "PixelDisK_", 12, memberOfCluster, centers);
+    /*
+    neighborCheck(img, 4);
+    bestK = centers.size();
+    cout << "best k after NeighborCheck: " << bestK << endl;
+     */
     return bestK;
+}
+
+bool KMeansClus::neighborCheck(Mat img, int neighbors) {
+    for (int center = 0; center < centers.size(); center++) {
+        for (int y = 0; y < frames[0].cols; y++) {
+            for (int x = 0; x < frames[0].rows; x++) {
+                if (memberOfCluster[x][y] != center) continue;
+            }
+        }
+    }
 }

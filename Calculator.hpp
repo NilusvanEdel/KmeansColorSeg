@@ -34,7 +34,6 @@ public:
     virtual int getMaxX() = 0;
     virtual int getMaxY() = 0;
 private:
-    int maxColorDis;
     int maxX;
     int maxY;
 };

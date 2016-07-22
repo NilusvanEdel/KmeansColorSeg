@@ -5,7 +5,6 @@
 #include "EuclidianCalculator.hpp"
 
 EuclidianCalculator::EuclidianCalculator(int maxX, int maxY) {
-    this->maxColorDis = maxColorDis;
     this->maxX = maxX;
     this->maxY = maxY;
 }
@@ -16,7 +15,7 @@ float EuclidianCalculator::distance(Vec5f vec1, Vec5f vec2) {
     for (int i = 0; i < 3; i++) {
         // the enumarator has to be unequal to zero
         if (vec1[i]-vec2[i] != 0) {
-            result += (pow((vec1[i] - vec2[i]), 2) / (pow(maxColorDis, 2)));
+            result += (pow((vec1[i] - vec2[i]), 2));
         }
     }
     return sqrt(result);
@@ -35,7 +34,7 @@ float EuclidianCalculator::distance(Vec6f vec1, Vec5f vec2) {
 Vec5f EuclidianCalculator::variance(Vec5f vec1, Vec6f vec2) {
     Vec5f variance;
     for (int i = 0; i < 3; i++) {
-        if (i < 3) variance[i] = pow(vec1.val[i]-vec2.val[i],2);;
+        variance[i] = pow(vec1.val[i]-vec2.val[i],2);;
     }
     return variance;
 }

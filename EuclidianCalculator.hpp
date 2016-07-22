@@ -30,8 +30,7 @@ public:
     int getMaxX() { return maxX; }
     int getMaxY() { return maxY; }
 private:
-    // the maximal possible distances for maxColorDis and maxPixelDis
-    int maxColorDis = 255;
+    // the maximal possible X and Y
     int maxX;
     int maxY;
 

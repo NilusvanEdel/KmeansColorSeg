@@ -27,8 +27,9 @@ private:
     vector<Vec6f> centers;
     // calculate the optimal value of k
     int calculateK(Mat img);
-    // the actual kMeans algorithm
-    void kMeansAlgorithm(Mat img);
+    // the actual kMeans algorithm, if clusterToSplit == -1 the regular algorith will be executed
+    // otherwise it will split the selectedCluster according to its center and the center of centers.size()-1
+    void kMeansAlgorithm(Mat img, int clusterToSplit);
     // maximal k
     const int kMax = 8;
     // the index of this vectors assigns clusters to the corresponding coordinates in the particular image
@@ -38,6 +39,9 @@ private:
     Calculator* calculator;
     // a boolean which determines whether it is a synthetic or real video
     bool realVid;
+    // check whether the segmented clusters keep their neighborhoodproperties and if not it creates new clusters
+    bool neighborCheck(Mat img, int neighbors);
+
 };
 
 #endif //NAIVEAPPROACHKMEANSCSEG_KMEANS_HPP
