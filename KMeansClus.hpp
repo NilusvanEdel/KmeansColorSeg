@@ -29,7 +29,7 @@ private:
     int calculateK(Mat img);
     // the actual kMeans algorithm, if clusterToSplit == -1 the regular algorith will be executed
     // otherwise it will split the selectedCluster according to its center and the center of centers.size()-1
-    void kMeansAlgorithm(Mat img, int clusterToSplit);
+    void kMeansAlgorithm(Mat img, int clusterToSplit, int initialCentersize);
     // maximal k
     const int kMax = 8;
     // the index of this vectors assigns clusters to the corresponding coordinates in the particular image
@@ -40,7 +40,7 @@ private:
     // a boolean which determines whether it is a synthetic or real video
     bool realVid;
     // check whether the segmented clusters keep their neighborhoodproperties and if not it creates new clusters
-    bool neighborCheck(Mat img, int neighbors);
+    bool neighborCheck(Mat img);
 
 };
 

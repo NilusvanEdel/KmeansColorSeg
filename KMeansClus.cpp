@@ -67,7 +67,7 @@ void KMeansClus::startClustering() {
     // begin of the loop
     for (int frameCounter = 0; frameCounter < frames.size(); frameCounter++)
     {
-        kMeansAlgorithm(frames[frameCounter], -1);
+        kMeansAlgorithm(frames[frameCounter], -1, 0);
         stringstream filename;
         filename << "clustered" << frameCounter;
         Printer::printImg(frames[frameCounter],filename.str(),memberOfCluster,centers);
@@ -76,7 +76,7 @@ void KMeansClus::startClustering() {
     return;
 }
 
-void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit) {
+void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit, int initialCentersize) {
     Calculator* calculator = this->calculator;
     if (clusterToSplit != -1) {
         calculator = new CoordEucCalculator(calculator->getMaxX(),calculator->getMaxY());
@@ -96,7 +96,7 @@ void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit) {
             for (int x = 0; x < img.rows; x++)
             {
                 if ((clusterToSplit != -1) &&
-                    !(memberOfCluster[x][y] == clusterToSplit || memberOfCluster[x][y] == centers.size()) ) continue;
+                    !(memberOfCluster[x][y] == clusterToSplit || memberOfCluster[x][y] > initialCentersize-1) ) continue;
                 Vec3b tmp = img.at<Vec3b>(x, y);
                 for (int i = 0; i < 3; i++) ColorAndPixelSpace[i]=(int)tmp[i];
                 ColorAndPixelSpace[3] = x;
@@ -116,8 +116,13 @@ void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit) {
                     }
                 }
                 else {
-                    if (calculator->distance(ColorAndPixelSpace,centers[centers.size()-1]) < min)
-                        cluster = centers.size()-1;
+                    for (int i = initialCentersize; i < centers.size(); i++) {
+                        float distance = calculator->distance(ColorAndPixelSpace, centers[i]);
+                        if (distance < min) {
+                        min = distance;
+                        cluster = i;
+                        }
+                    }
                 }
                 if (memberOfCluster[x][y] != cluster)
                 {
@@ -163,9 +168,9 @@ int KMeansClus::calculateK(Mat img) {
     Vec5f mean= {0,0,0,0,0};
     // the calculated centers for each iteration are stored in this vector
     vector<vector <Vec6f>> bestCenters;
-    for (int y = 0; y < frames[0].cols; y++)
+    for (int y = 0; y < img.cols; y++)
     {
-        for (int x = 0; x < frames[0].rows; x++)
+        for (int x = 0; x < img.rows; x++)
         {
             Vec3b tmp = img.at<Vec3b>(x, y);
             for(int j = 0; j < 3; j++) {
@@ -262,7 +267,7 @@ int KMeansClus::calculateK(Mat img) {
             }
         }
         // reuse the kMeans algorithm and calculate the new intra and inter meassurments
-        kMeansAlgorithm(img, -1);
+        kMeansAlgorithm(img, -1, 0);
         Printer::debugPrintImg(img, "testForK_", k+1, memberOfCluster, centers);
         float intraMeassure = 0;
         for (int y = 0; y < frames[0].cols; y++)
@@ -338,25 +343,120 @@ int KMeansClus::calculateK(Mat img) {
     }
     centers = bestCenters[bestK-2];
     cout << "best k before NeighborCheck: " << bestK << endl;
-    centers[2][3] = 2;
-    centers[2][4] = 8;
-    centers.push_back(Vec6f(centers[2][0],centers[2][1],centers[2][2],11,0,0));
-    kMeansAlgorithm(img,2);
-    Printer::debugPrintImg(img, "PixelDisK_", 12, memberOfCluster, centers);
-    /*
-    neighborCheck(img, 4);
+    neighborCheck(img);
     bestK = centers.size();
     cout << "best k after NeighborCheck: " << bestK << endl;
-     */
+    Printer::debugPrintImg(img, "finalK_", bestK, memberOfCluster, centers);
     return bestK;
 }
 
-bool KMeansClus::neighborCheck(Mat img, int neighbors) {
-    for (int center = 0; center < centers.size(); center++) {
-        for (int y = 0; y < frames[0].cols; y++) {
-            for (int x = 0; x < frames[0].rows; x++) {
+bool KMeansClus::neighborCheck(Mat img) {
+    bool change = false;
+    int initialCentersize = centers.size();
+    for (int center = 0; center < initialCentersize; center++) {
+        vector<vector<Point>> ptsOfCenter;
+        // needed otherwise the pointers will lose the adress after every push_back needs to be increased for
+        // huge images
+        ptsOfCenter.reserve(100000);
+        ptsOfCenter.resize(0);
+        vector<vector<Point>*> pointerToPtsOfCenter;
+        pointerToPtsOfCenter.reserve(1000);
+        pointerToPtsOfCenter.resize(0);
+        vector<vector<vector<Point>**>> clusterOfCenter;
+        clusterOfCenter.resize(img.rows);
+        for (int i = 0; i < img.rows; i++)
+            clusterOfCenter[i].resize(img.cols);
+        int counter = 0;
+        for (int y = 0; y < img.cols; y++) {
+            for (int x = 0; x < img.rows; x++) {
                 if (memberOfCluster[x][y] != center) continue;
+                bool neigh1 = false, neigh2 = false, neigh3= false, neigh4 = false;
+                if (y-1 >= 0) {
+                    if (x-1 >= 0 && memberOfCluster[x-1][y-1] == center) neigh1 = true;
+                    if (memberOfCluster[x][y-1] == center) neigh2 = true;
+                    if (x+1 < calculator->getMaxX() && memberOfCluster[x+1][y-1] == center) neigh3 = true;
+                }
+                if (x-1 >= 0 && memberOfCluster[x-1][y] == center) neigh4 = true;
+                Point point (x,y);
+                if (!neigh1 && !neigh2 && !neigh3 && !neigh4) {
+                    ptsOfCenter.push_back(vector<Point>(1));
+                    ptsOfCenter[ptsOfCenter.size()-1][0] = point;
+                    pointerToPtsOfCenter.push_back(&ptsOfCenter[ptsOfCenter.size()-1]);
+                    clusterOfCenter[x][y] = &pointerToPtsOfCenter[pointerToPtsOfCenter.size()-1];
+                    counter++;
+                }
+                // if neigh2 is active all active neighbors belong already to the same neighbor
+                else if (neigh2)  {
+                    clusterOfCenter[x][y] = clusterOfCenter[x][y-1];
+                    (**clusterOfCenter[x][y]).push_back(point);
+                }
+                // if neigh1 is active only neigh3 could possible belong to a different neighbor
+                // if neigh3 != neigh1 they need to be combined now
+                else if (neigh1 && !neigh2) {
+                    if (!neigh3 || neigh3 && (clusterOfCenter[x-1][y-1] == clusterOfCenter[x+1][y-1])) {
+                        clusterOfCenter[x][y] = clusterOfCenter[x-1][y-1];
+                    }
+                    if (neigh3 && clusterOfCenter[x-1][y-1] != clusterOfCenter[x+1][y-1]) {
+                        clusterOfCenter[x][y] = clusterOfCenter[x-1][y-1];
+                        for (int i = 0; i < (**clusterOfCenter[x+1][y-1]).size(); i++) {
+                            (**clusterOfCenter[x][y]).push_back((**clusterOfCenter[x+1][y-1])[i]);
+                        }
+                        (**clusterOfCenter[x+1][y-1]).empty();
+                        *clusterOfCenter[x+1][y-1] = *clusterOfCenter[x][y];
+                        counter--;
+                    }
+                    (**clusterOfCenter[x][y]).push_back(point);
+                }
+                // if neigh3 is active and !neigh2 only neigh 4 could possibly belong to a different neighbor
+                // if neigh4 is active they need to be combined
+                else if (neigh3 && !neigh1 && !neigh2) {
+                    if (neigh4 && (clusterOfCenter[x+1][y-1] == clusterOfCenter[x-1][y])) {
+                        clusterOfCenter[x][y] = clusterOfCenter[x+1][y-1];
+                    }
+                    if (neigh4 && (clusterOfCenter[x+1][y-1] != clusterOfCenter[x-1][y])) {
+                        clusterOfCenter[x][y] = clusterOfCenter[x+1][y-1];
+                        for (int i = 0; i < (**clusterOfCenter[x-1][y]).size(); i++) {
+                            Point point2 = (**clusterOfCenter[x-1][y])[i];
+                            (**clusterOfCenter[x][y]).push_back(point2);
+                        }
+                        (**clusterOfCenter[x-1][y]).empty();
+                        *clusterOfCenter[x-1][y] = *clusterOfCenter[x][y];
+                        counter --;
+                    }
+                    (**clusterOfCenter[x][y]).push_back(point);
+                }
+                // if neigh4 is active and not neigh1-3 x,y belong in this neighborhood
+                else if (neigh4) {
+                    clusterOfCenter[x][y] = clusterOfCenter[x-1][y];
+                    (**clusterOfCenter[x][y]).push_back(point);
+                }
             }
         }
+        if (counter > 1) {
+            change = true;
+            bool first = true;
+            for (int i = 0; i < ptsOfCenter.size(); i++) {
+                if (ptsOfCenter[i].empty()) continue;
+                int averageX = 0, averageY = 0;
+                for (int j = 0; j < ptsOfCenter[i].size();j++) {
+                    averageX += ptsOfCenter[i][j].x;
+                    averageY += ptsOfCenter[i][j].y;
+                }
+                averageX /= ptsOfCenter[i].size();
+                averageY /= ptsOfCenter[i].size();
+                if (first) {
+                    centers[center] = Vec6f(centers[center][0],centers[center][1],centers[center][2],
+                                            averageX,averageY);
+                    first = false;
+                }
+                else {
+                    Vec6f temp = Vec6f(centers[center][0],centers[center][1],centers[center][2],
+                                       averageX,averageY);
+                    centers.push_back(temp);
+                    }
+            }
+            kMeansAlgorithm(img,center, initialCentersize);
+        }
     }
+    return change;
 }

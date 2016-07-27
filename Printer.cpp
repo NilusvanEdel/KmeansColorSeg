@@ -51,7 +51,7 @@ void Printer::debugPrintImg(Mat img, string filename, int clusterCount,
                 Vec3b tmp;
                 if (centers[i][5] == 0) tmp = Vec3b(255,255,255);
                 else {
-                    tmp = Vec3b(1,1,1);
+                    tmp = Vec3b(255,255,255);
                     if (memberOfCluster[x][y] == i) {
                         tmp(0) = centers[memberOfCluster[x][y]](0);
                         tmp(1) = centers[memberOfCluster[x][y]](1);

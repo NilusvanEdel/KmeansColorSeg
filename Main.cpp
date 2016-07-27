@@ -11,7 +11,7 @@
 
 int main(int argc, char* argv[])
 {
-    VideoCapturer vidCap("/home/nilus/Bilder/004.png","/home/nilus/test/",false);
+    VideoCapturer vidCap("/home/nilus/Bilder/002.png","/home/nilus/test/",false);
     if (vidCap.readVideo() == -1) return -1;
     else
     {
@@ -21,7 +21,6 @@ int main(int argc, char* argv[])
         kmeans.startClustering();
         delete calculator;
     }
-
     return 0;
 
 }
