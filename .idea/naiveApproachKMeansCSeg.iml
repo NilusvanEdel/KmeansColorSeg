@@ -10,6 +10,8 @@
       <sourceFolder url="file://$MODULE_DIR$/CoordEucCalculator.hpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/EuclidianCalculator.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/EuclidianCalculator.hpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/HSVEucCalculator.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/HSVEucCalculator.hpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/KMeansClus.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/KMeansClus.hpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Main.cpp" isTestSource="false" />

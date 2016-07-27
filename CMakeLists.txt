@@ -10,7 +10,8 @@ find_package(Boost REQUIRED COMPONENTS system filesystem)
 include_directories(${Boost_INCLUDE_DIRS})
 
 set(SOURCE_FILES Main.cpp VideoCapturer.hpp VideoCapturer.cpp KMeansClus.cpp KMeansClus.hpp Calculator.hpp
-        EuclidianCalculator.cpp EuclidianCalculator.hpp Printer.cpp Printer.hpp CoordEucCalculator.cpp CoordEucCalculator.hpp CalculateK.cpp CalculateK.hpp)
+        EuclidianCalculator.cpp EuclidianCalculator.hpp Printer.cpp Printer.hpp CoordEucCalculator.cpp
+        CoordEucCalculator.hpp HSVEucCalculator.hpp HSVEucCalculator.cpp CalculateK.cpp CalculateK.hpp)
 
 add_executable(naiveApproachKMeansCSeg ${SOURCE_FILES})
 

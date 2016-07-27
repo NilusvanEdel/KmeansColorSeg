@@ -17,17 +17,18 @@ public:
     float distance(Vec6f vec1, Vec6f vec2);
     float distance(Vec6f vec1, Vec5f vec2);
 
-    Vec5f variance(Vec5f vec1, Vec5f vec2);
-    Vec5f variance(Vec6f vec1, Vec5f vec2);
-    Vec5f variance(Vec5f vec1, Vec6f vec2);
 
-    float singleVariance(Vec5f vector, Vec6f meanVec);
+    Vec5f variance(Vec5f vec1, Vec6f vec2);
+    Vec5f variance(Vec6f vec1, Vec5f vec2);
+
+    float singleVariance(Vec5f vector);
 
     int getMaxX();
     int getMaxY();
 
 private:
-    EuclidianCalculator* eucCalc;
+    int maxX;
+    int maxY;
 };
 
 #endif //NAIVEAPPROACHKMEANSCSEG_HSVEUCCALCULATOR_HPP
