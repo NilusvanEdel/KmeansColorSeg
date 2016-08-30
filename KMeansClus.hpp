@@ -19,10 +19,13 @@ public:
     // Constructor with given k-number
     KMeansClus(vector<Mat> frames, int k, Calculator* calculator, bool realVid);
     ~KMeansClus();
+    // the usage of the kmean algorithm
     void startClustering();
     // the actual kMeans algorithm, if clusterToSplit == -1 the regular algorith will be executed
     // otherwise it will split the selectedCluster according to its center and the center of centers.size()-1
     void kMeansAlgorithm(Mat img, int clusterToSplit, int initialCentersize);
+    // returns the current validity
+    float getValidity (Mat img);
 private:
     // vector including all Matrices of the frames
     vector<Mat> frames;
@@ -35,8 +38,10 @@ private:
     // calculates the mean of matrix
     Vec3f meanCalculator(Mat matrix);
     Calculator* calculator;
-    // a boolean which determines whether it is a synthetic or real video
+    // a boolean which determines whether i is a synthetic or real video
     bool realVid;
+    // the old calculated Centers using calculateK are stored here
+    vector<vector <Vec6f>> bestCenters;
 
 };
 

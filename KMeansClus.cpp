@@ -26,7 +26,7 @@ KMeansClus::KMeansClus(vector<Mat> frames, Calculator* calculator, bool realVid)
             memberOfCluster[x][y] = 0;
         }
     }
-    CalculateK::calculateK(frames[0], calculator, &centers, this, &memberOfCluster, realVid);
+    CalculateK::calculateK(frames[0], calculator, &centers, this, &memberOfCluster, realVid, &bestCenters);
 
 }
 KMeansClus::KMeansClus(vector<Mat> frames,int k, Calculator* calculator, bool realVid) {
@@ -55,28 +55,51 @@ KMeansClus::KMeansClus(vector<Mat> frames,int k, Calculator* calculator, bool re
         centers[i](2) = distribution(generator);
         centers[i](3) = distribution2(generator);
         centers[i](4) = distribution3(generator);
+        centers[i](5) = 0;
     }
 }
 
+//deallocator
 KMeansClus::~KMeansClus() {
     vector<Mat>().swap(frames);
     vector<Vec6f>().swap(centers);
     vector<vector<int>>().swap(memberOfCluster);
 }
 
+
 void KMeansClus::startClustering() {
     // begin of the loop
     for (int frameCounter = 0; frameCounter < frames.size(); frameCounter++)
     {
         kMeansAlgorithm(frames[frameCounter], -1, 0);
+        float validity = CalculateK::getValidity(frames[frameCounter], calculator, &centers, &memberOfCluster);
+        int currentBestk = centers.size();
+        // bestk size = 0 equals k = 2
+        bestCenters[currentBestk-2] = centers;
+        CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
+        kMeansAlgorithm(frames[frameCounter], -1, 0);
+        float validityKBigger = getValidity(frames[frameCounter]);
+        centers = bestCenters[currentBestk-3];
+        kMeansAlgorithm(frames[frameCounter], -1, 0);
+        //todo implement a better way for checking for smaller k
+        float validityKSmaller = getValidity(frames[frameCounter]);
+        centers = bestCenters[currentBestk-2];
+        // if k is still a local Minima
+        if (!(validity <= validityKBigger && validity <= validityKSmaller)) {
+            cout << "new K Calculation" << endl;
+            CalculateK::calculateK(frames[frameCounter], calculator,
+                                   &centers, this, &memberOfCluster, realVid, &bestCenters);
+        }
         stringstream filename;
         filename << "clustered" << frameCounter;
         Printer::printImg(frames[frameCounter],filename.str(),memberOfCluster,centers);
         cout << "frame: " <<frameCounter <<" written" << endl;
+
     }
     return;
 }
 
+//todo check if initialCentersize is needed
 void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit, int initialCentersize) {
     Calculator* calculator = this->calculator;
     if (clusterToSplit != -1) {
@@ -104,7 +127,7 @@ void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit, int initialCenters
                 ColorAndPixelSpace[4] = y;
                 int cluster = 0;
                 if (clusterToSplit != -1)  cluster = clusterToSplit;
-                float min = calculator->distance((Vec5f)ColorAndPixelSpace,centers[cluster]);
+                float min = calculator->distance((Vec5f)ColorAndPixelSpace, centers[cluster]);
                 if (clusterToSplit == -1) {
                     for (int i = 1; i < centers.size(); i++)
                     {
@@ -160,6 +183,10 @@ void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit, int initialCenters
         }
         if (counter > 10) limitChanges = pow(limitChanges,2);
     } while (changes > limitChanges);
+}
+
+float KMeansClus::getValidity(Mat img) {
+    return CalculateK::getValidity(img, calculator, &centers, &memberOfCluster);
 }
 
 
