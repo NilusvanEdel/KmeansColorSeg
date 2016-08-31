@@ -69,6 +69,7 @@ KMeansClus::~KMeansClus() {
 
 void KMeansClus::startClustering() {
     // begin of the loop
+    superClusterPosition.resize(frames.size());
     for (int frameCounter = 0; frameCounter < frames.size(); frameCounter++)
     {
         kMeansAlgorithm(frames[frameCounter], -1, 0);
@@ -90,11 +91,72 @@ void KMeansClus::startClustering() {
             CalculateK::calculateK(frames[frameCounter], calculator,
                                    &centers, this, &memberOfCluster, realVid, &bestCenters);
         }
+        /* toggle for correct results
+        CalculateK::calculateK(frames[frameCounter], calculator,
+                               &centers, this, &memberOfCluster, realVid, &bestCenters);
+        */
+        // if no superclusters exist, the first centers will be the first superclusters
+        if (frameCounter == 0) {
+            for (int i = 0; i < centers.size(); i++) {
+                supercenters.push_back(centers[i]);
+                superClusterPosition[frameCounter].push_back(i);
+            }
+        }
+        // check which new clusters belong to which supercluster or if they need to create a new one
+        else {
+            for (int j = 0; j < centers.size(); j++) {
+                float mindistance = 99999999;
+                int index = -1;
+                int maxX = frames[frameCounter].rows;
+                int maxY = frames[frameCounter].cols;
+                // the delta which will determine whether it still belongs to the same supercluster
+                float delta = 0.15;
+                Vec5f deltaDisVector;
+                for (int i = 0; i < 5; i++) {
+                    if (i < 3) deltaDisVector[i] = 255 * delta;
+                    if (i == 3) deltaDisVector[i] == maxX * delta;
+                    if (i == 4) deltaDisVector[i] == maxY * delta;
+                }
+                float deltaDistance = calculator->distance(Vec5f(0,0,0,0,0), deltaDisVector);
+                deltaDistance += sqrt(pow(0 - deltaDisVector[3] / maxX * 255, 2) +
+                                      pow(0 - deltaDisVector[4] / maxY * 255, 2));
+                for (int i = 0; i < supercenters.size(); i++) {
+                    float distance_col = calculator->distance(centers[j],supercenters[i]);
+                    float distance_pix = sqrt(pow(centers[j](3) / maxX * 255 - supercenters[i](3) / maxX * 255, 2) +
+                                              pow(centers[j](4) / maxY * 255 - supercenters[i](4) / maxY * 255, 2));
+                    // check which supercluster is the closest one and whether it is in the deltazone
+                    float tmpDis = distance_col+distance_pix;
+                    if (tmpDis < mindistance && tmpDis <= deltaDistance ) {
+                        index = i;
+                        mindistance = tmpDis;
+                    }
+                }
+                // if no cluster was in the deltazone it is the beginning of a new supercluster
+                if (index == -1) {
+                    supercenters.push_back(centers[j]);
+                    index = supercenters.size()-1;
+                }
+                superClusterPosition[frameCounter].push_back(index);
+            }
+            // update supercenters
+            for (int i = 0; i < centers.size(); i++) {
+                int pos = superClusterPosition[frameCounter][i];
+                supercenters[pos] = centers[i];
+            }
+        }
         stringstream filename;
         filename << "clustered" << frameCounter;
         Printer::printImg(frames[frameCounter],filename.str(),memberOfCluster,centers);
         cout << "frame: " <<frameCounter <<" written" << endl;
-
+    }
+    cout << "Supercenter count: " << supercenters.size() << endl;
+    for (int i = 0; i < superClusterPosition.size(); i++) {
+        cout << "SuperclusterPosition at " << i <<"   ";
+        for (int j = 0; j < superClusterPosition[i].size(); j++) {
+            int tmp = superClusterPosition[i][j];
+            cout << tmp << " ";
+        }
+        cout << endl;
     }
     return;
 }

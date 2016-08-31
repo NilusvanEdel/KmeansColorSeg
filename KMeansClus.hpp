@@ -42,6 +42,10 @@ private:
     bool realVid;
     // the old calculated Centers using calculateK are stored here
     vector<vector <Vec6f>> bestCenters;
+    // at the index of this vector the corresponding supercluster for each cluster is stored
+    vector <vector<int>> superClusterPosition;
+    // here the centers overlap over each frame
+    vector <Vec6f> supercenters;
 
 };
 
