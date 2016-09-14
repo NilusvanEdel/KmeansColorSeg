@@ -2,6 +2,7 @@
 // Created by nilus on 27.07.16.
 //
 
+#include <opencv2/photo.hpp>
 #include "CalculateK.hpp"
 #include "Calculator.hpp"
 #include "EuclidianCalculator.hpp"
@@ -100,9 +101,11 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     }
     *centers = (*bestCenters)[bestK-2];
     cout << "best k before NeighborCheck: " << bestK << endl;
+    /*
     CalculateK::neighborCheck(img, centers, kmeans, memberOfCluster, calculator);
     bestK = centers->size();
     cout << "best k after NeighborCheck: " << bestK << endl;
+    */
     Printer::debugPrintImg(img, "finalK_", bestK, *memberOfCluster, *centers);
     return bestK;
 }
