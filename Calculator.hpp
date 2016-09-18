@@ -26,6 +26,7 @@ public:
     virtual float distance(Vec6f vec1, Vec6f vec2) = 0;
     virtual float distance(Vec6f vec1, Vec5f vec2) = 0;
 
+    // the division needed to get the actual variance occurs later on
     virtual Vec5f variance(Vec5f vec1, Vec6f vec2) = 0;
     virtual Vec5f variance(Vec6f vec1, Vec5f vec2) = 0;
 

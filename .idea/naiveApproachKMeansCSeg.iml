@@ -19,6 +19,8 @@
       <sourceFolder url="file://$MODULE_DIR$/Printer.hpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/VideoCapturer.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/VideoCapturer.hpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/PixEucCalculator.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/PixEucCalculator.hpp" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

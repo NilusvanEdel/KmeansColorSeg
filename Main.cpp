@@ -9,16 +9,17 @@
 #include "EuclidianCalculator.hpp"
 #include "CosineCalculator.hpp"
 #include "Printer.hpp"
+#include "PixEucCalculator.hpp"
 
 
 int main(int argc, char* argv[])
 {
-    VideoCapturer vidCap("/home/nilus/Videos/tinySample3.avi","/home/nilus/test/",false);
+    VideoCapturer vidCap("/home/nilus/Videos/beispiel3.jpg","/home/nilus/test/",false);
     if (vidCap.readVideo() == -1) return -1;
     else
     {
         std::vector<Mat> frames = vidCap.readFrames();
-        Calculator* calculator = new HSVEucCalculator(frames[0].rows, frames[0].cols);
+        Calculator* calculator = new PixEucCalculator(frames[0].rows, frames[0].cols);
         KMeansClus kmeans(frames, calculator, false);
         //kmeans.startClustering();
         delete calculator;

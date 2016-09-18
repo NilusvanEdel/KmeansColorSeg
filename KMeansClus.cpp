@@ -29,6 +29,8 @@ KMeansClus::KMeansClus(vector<Mat> frames, Calculator* calculator, bool realVid)
     CalculateK::calculateK(frames[0], calculator, &centers, this, &memberOfCluster, realVid, &bestCenters);
 
 }
+
+//todo fix it, currently not workign due to BestK
 KMeansClus::KMeansClus(vector<Mat> frames,int k, Calculator* calculator, bool realVid) {
     this->calculator = calculator;
     this->realVid = realVid;
@@ -57,6 +59,10 @@ KMeansClus::KMeansClus(vector<Mat> frames,int k, Calculator* calculator, bool re
         centers[i](4) = distribution3(generator);
         centers[i](5) = 0;
     }
+    /*
+    kMeansAlgorithm(frames[0],-1, 0);
+    Printer::debugPrintImg(frames[0], "manualSelectedK", k, memberOfCluster, centers);
+    */
 }
 
 //deallocator

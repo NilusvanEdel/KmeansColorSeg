@@ -100,6 +100,7 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
         }
     }
     *centers = (*bestCenters)[bestK-2];
+    kmeans->kMeansAlgorithm(img,-1,0);
     cout << "best k before NeighborCheck: " << bestK << endl;
     /*
     CalculateK::neighborCheck(img, centers, kmeans, memberOfCluster, calculator);
@@ -107,6 +108,7 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     cout << "best k after NeighborCheck: " << bestK << endl;
     */
     Printer::debugPrintImg(img, "finalK_", bestK, *memberOfCluster, *centers);
+    Printer::printImg(img, "finalK", *memberOfCluster, *centers);
     return bestK;
 }
 
