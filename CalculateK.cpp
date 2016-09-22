@@ -112,6 +112,7 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     return bestK;
 }
 
+//todo implement polyfit
 bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans,
                                vector <vector<int>>* memberOfCluster, Calculator* calculator) {
     bool change = false;
