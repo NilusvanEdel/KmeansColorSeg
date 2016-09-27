@@ -39,6 +39,7 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     }
     mean /= (float(img.rows)*float(img.cols));
     centers->push_back(Vec6f{mean[0],mean[1],mean[2],mean[3],mean[4],(float)img.rows*img.cols});
+
     // begin the loop to split the center with highest variance
     for (int k = 1; k < kMax; k++)
     {
@@ -305,4 +306,11 @@ void CalculateK::splitCluster(Mat img, Calculator* calculator, vector<Vec6f>* ce
         }
     }
      */
+    for (int y = 0; y < img.cols; y++)
+    {
+        for (int x = 0; x < img.rows; x++)
+        {
+            (*memberOfCluster)[x][y] = 0;
+        }
+    }
 }

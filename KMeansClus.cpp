@@ -216,7 +216,7 @@ void KMeansClus::kMeansAlgorithm(Mat img, Calculator* calculator) {
             {
                 int cluster = memberOfCluster[x][y];
                 Vec3b tmp = img.at<Vec3b>(x, y);
-                newCenters[cluster]+=Vec6f(tmp[0],tmp[1],tmp[2],x,y,0);
+                newCenters[cluster] += Vec6f(tmp[0],tmp[1],tmp[2],x,y,0);
                 newCenters[cluster](5)++;
             }
         }
