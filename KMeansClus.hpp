@@ -23,9 +23,13 @@ public:
     void startClustering();
     // the actual kMeans algorithm, if clusterToSplit == -1 the regular algorith will be executed
     // otherwise it will split the selectedCluster according to its center and the center of centers.size()-1
-    void kMeansAlgorithm(Mat img, int clusterToSplit, int initialCentersize);
+    void kMeansAlgorithm(Mat img);
+    void kMeansAlgorithm(Mat img, Calculator* calculator);
     // returns the current validity
     float getValidity (Mat img);
+    //  set Calculator
+    void setCalculator(Calculator* calculator);
+
 private:
     // vector including all Matrices of the frames
     vector<Mat> frames;
@@ -46,7 +50,6 @@ private:
     vector <vector<int>> superClusterPosition;
     // here the centers overlap over each frame
     vector <Vec6f> supercenters;
-
 };
 
 #endif //NAIVEAPPROACHKMEANSCSEG_KMEANS_HPP

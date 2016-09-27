@@ -78,16 +78,16 @@ void KMeansClus::startClustering() {
     superClusterPosition.resize(frames.size());
     for (int frameCounter = 0; frameCounter < frames.size(); frameCounter++)
     {
-        kMeansAlgorithm(frames[frameCounter], -1, 0);
+        kMeansAlgorithm(frames[frameCounter]);
         float validity = CalculateK::getValidity(frames[frameCounter], calculator, &centers, &memberOfCluster);
         int currentBestk = centers.size();
         // bestk size = 0 equals k = 2
         bestCenters[currentBestk-2] = centers;
         CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
-        kMeansAlgorithm(frames[frameCounter], -1, 0);
+        kMeansAlgorithm(frames[frameCounter]);
         float validityKBigger = getValidity(frames[frameCounter]);
         centers = bestCenters[currentBestk-3];
-        kMeansAlgorithm(frames[frameCounter], -1, 0);
+        kMeansAlgorithm(frames[frameCounter]);
         //todo implement a better way for checking for smaller k
         float validityKSmaller = getValidity(frames[frameCounter]);
         centers = bestCenters[currentBestk-2];
@@ -166,13 +166,11 @@ void KMeansClus::startClustering() {
     }
     return;
 }
+void KMeansClus::kMeansAlgorithm(Mat img) {
+    kMeansAlgorithm(img, this->calculator);
+}
 
-//todo check if initialCentersize is needed
-void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit, int initialCentersize) {
-    Calculator* calculator = this->calculator;
-    if (clusterToSplit != -1) {
-        calculator = new CoordEucCalculator(calculator->getMaxX(),calculator->getMaxY());
-    }
+void KMeansClus::kMeansAlgorithm(Mat img, Calculator* calculator) {
     // the index of this array assigns the pixels of frames[i] to the corresponding clusters
     int changes;
     float limitChanges = (float)(img.cols*img.rows);
@@ -187,33 +185,19 @@ void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit, int initialCenters
         {
             for (int x = 0; x < img.rows; x++)
             {
-                if ((clusterToSplit != -1) &&
-                    !(memberOfCluster[x][y] == clusterToSplit || memberOfCluster[x][y] > initialCentersize-1) ) continue;
                 Vec3b tmp = img.at<Vec3b>(x, y);
                 for (int i = 0; i < 3; i++) ColorAndPixelSpace[i]=(int)tmp[i];
                 ColorAndPixelSpace[3] = x;
                 ColorAndPixelSpace[4] = y;
                 int cluster = 0;
-                if (clusterToSplit != -1)  cluster = clusterToSplit;
                 float min = calculator->distance((Vec5f)ColorAndPixelSpace, centers[cluster]);
-                if (clusterToSplit == -1) {
-                    for (int i = 1; i < centers.size(); i++)
+                for (int i = 1; i < centers.size(); i++)
+                {
+                    float distance = calculator->distance(ColorAndPixelSpace,centers[i]);
+                    if (distance < min)
                     {
-                        float distance = calculator->distance(ColorAndPixelSpace,centers[i]);
-                        if (distance < min)
-                        {
-                            min = distance;
-                            cluster = i;
-                        }
-                    }
-                }
-                else {
-                    for (int i = initialCentersize; i < centers.size(); i++) {
-                        float distance = calculator->distance(ColorAndPixelSpace, centers[i]);
-                        if (distance < min) {
                         min = distance;
                         cluster = i;
-                        }
                     }
                 }
                 if (memberOfCluster[x][y] != cluster)
@@ -255,6 +239,10 @@ void KMeansClus::kMeansAlgorithm(Mat img, int clusterToSplit, int initialCenters
 
 float KMeansClus::getValidity(Mat img) {
     return CalculateK::getValidity(img, calculator, &centers, &memberOfCluster);
+}
+
+void KMeansClus::setCalculator(Calculator *calculator) {
+    this->calculator = calculator;
 }
 
 

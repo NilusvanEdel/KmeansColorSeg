@@ -7,6 +7,7 @@
 #include "Calculator.hpp"
 #include "EuclidianCalculator.hpp"
 #include "Printer.hpp"
+#include "PixEucCalculator.hpp"
 
 int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* centers, KMeansClus* kmeans,
                            vector <vector<int>>* memberOfCluster, bool realVid, vector<vector <Vec6f>>* bestCenters) {
@@ -44,7 +45,7 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
         cout << "K: " << k << endl;
         splitCluster(img, calculator, centers, memberOfCluster);
         // reuse the kMeans algorithm and calculate the new intra and inter meassurments
-        kmeans->kMeansAlgorithm(img, -1, 0);
+        kmeans->kMeansAlgorithm(img);
         Printer::debugPrintImg(img, "testForK_", k+1, *memberOfCluster, *centers);
         float currentValidity = getValidity(img, calculator, centers, memberOfCluster);
         //save current center
@@ -100,13 +101,13 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
         }
     }
     *centers = (*bestCenters)[bestK-2];
-    kmeans->kMeansAlgorithm(img,-1,0);
+    kmeans->kMeansAlgorithm(img);
     cout << "best k before NeighborCheck: " << bestK << endl;
     /*
     CalculateK::neighborCheck(img, centers, kmeans, memberOfCluster, calculator);
     bestK = centers->size();
     cout << "best k after NeighborCheck: " << bestK << endl;
-    */
+     */
     Printer::debugPrintImg(img, "finalK_", bestK, *memberOfCluster, *centers);
     Printer::printImg(img, "finalK", *memberOfCluster, *centers);
     return bestK;
@@ -117,114 +118,75 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
                                vector <vector<int>>* memberOfCluster, Calculator* calculator) {
     bool change = false;
     int initialCentersize = centers->size();
-    for (int center = 0; center < initialCentersize; center++) {
-        cout << "Center: "<< center << endl;
-        vector<vector<Point>> ptsOfCenter;
-        // needed otherwise the pointers will lose the adress after every push_back needs to be increased for
-        // huge images
-        ptsOfCenter.reserve(10000000);
-        ptsOfCenter.resize(0);
-        vector<vector<Point>*> pointerToPtsOfCenter;
-        pointerToPtsOfCenter.reserve(1000);
-        pointerToPtsOfCenter.resize(0);
-        vector<vector<vector<Point>**>> clusterOfCenter;
-        clusterOfCenter.resize(img.rows);
-        for (int i = 0; i < img.rows; i++)
-            clusterOfCenter[i].resize(img.cols);
-        int counter = 0;
-        bool debug = false;
+    for (int i = 0; i < initialCentersize; i++) {
+        cout << i << endl;
+        Mat temp(img.size(), img.type());
         for (int y = 0; y < img.cols; y++) {
             for (int x = 0; x < img.rows; x++) {
-                if ((*memberOfCluster)[x][y] != center) continue;
-                bool neigh1 = false, neigh2 = false, neigh3= false, neigh4 = false;
-                if (y-1 >= 0) {
-                    if (x-1 >= 0 && (*memberOfCluster)[x-1][y-1] == center) neigh1 = true;
-                    if ((*memberOfCluster)[x][y-1] == center) neigh2 = true;
-                    if (x+1 < calculator->getMaxX() && (*memberOfCluster)[x+1][y-1] == center) neigh3 = true;
-                }
-                if (x-1 >= 0 && (*memberOfCluster)[x-1][y] == center) neigh4 = true;
-                Point point (x,y);
-                if (!neigh1 && !neigh2 && !neigh3 && !neigh4) {
-                    ptsOfCenter.push_back(vector<Point>(1));
-                    ptsOfCenter[ptsOfCenter.size()-1][0] = point;
-                    pointerToPtsOfCenter.push_back(&ptsOfCenter[ptsOfCenter.size()-1]);
-                    clusterOfCenter[x][y] = &pointerToPtsOfCenter[pointerToPtsOfCenter.size()-1];
-                    counter++;
-                }
-                    // if neigh2 is active all active neighbors belong already to the same neighbor
-                else if (neigh2)  {
-                    clusterOfCenter[x][y] = clusterOfCenter[x][y-1];
-                    (**clusterOfCenter[x][y]).push_back(point);
-                }
-                    // if neigh1 is active only neigh3 could possible belong to a different neighbor
-                    // if neigh3 != neigh1 they need to be combined now
-                else if (neigh1 && !neigh2) {
-                    if (!neigh3 || neigh3 && (clusterOfCenter[x-1][y-1] == clusterOfCenter[x+1][y-1])) {
-                        clusterOfCenter[x][y] = clusterOfCenter[x-1][y-1];
+                int cluster = (*memberOfCluster)[x][y];
+                Vec3b tmp;
+                if ((*centers)[i][5] == 0) tmp = Vec3b(255, 255, 255);
+                else {
+                    tmp = Vec3b(255, 255, 255);
+                    if ((*memberOfCluster)[x][y] == i) {
+                        tmp(0) = (*centers)[(*memberOfCluster)[x][y]](0);
+                        tmp(1) = (*centers)[(*memberOfCluster)[x][y]](1);
+                        tmp(2) = (*centers)[(*memberOfCluster)[x][y]](2);
                     }
-                    if (neigh3 && clusterOfCenter[x-1][y-1] != clusterOfCenter[x+1][y-1]) {
-                        clusterOfCenter[x][y] = clusterOfCenter[x-1][y-1];
-                        for (int i = 0; i < (**clusterOfCenter[x+1][y-1]).size(); i++) {
-                            int place = (**clusterOfCenter[x+1][y-1]).size()-1;
-                            (**clusterOfCenter[x][y]).push_back((**clusterOfCenter[x+1][y-1])[place]);
-                            (**clusterOfCenter[x+1][y-1]).pop_back();
-                        }
-                        *clusterOfCenter[x+1][y-1] = *clusterOfCenter[x][y];
-                        counter--;
-                    }
-                    (**clusterOfCenter[x][y]).push_back(point);
                 }
-                    // if neigh3 is active and !neigh2 only neigh 4 could possibly belong to a different neighbor
-                    // if neigh4 is active they need to be combined
-                else if (neigh3 && !neigh1 && !neigh2) {
-                    if (!neigh4 || neigh4 && (clusterOfCenter[x+1][y-1] == clusterOfCenter[x-1][y])) {
-                        clusterOfCenter[x][y] = clusterOfCenter[x+1][y-1];
-                    }
-                    if (neigh4 && (clusterOfCenter[x+1][y-1] != clusterOfCenter[x-1][y])) {
-                        clusterOfCenter[x][y] = clusterOfCenter[x+1][y-1];
-                        for (int i = 0; i < (**clusterOfCenter[x-1][y]).size(); i++) {
-                            int place = (**clusterOfCenter[x-1][y]).size()-1;
-                            (**clusterOfCenter[x][y]).push_back((**clusterOfCenter[x-1][y])[place]);
-                            //Warum ändert sich die Größe hierbei nicht?!?!?!?!?
-                            (**clusterOfCenter[x-1][y]).pop_back();
-                        }
-                        *clusterOfCenter[x-1][y] = *clusterOfCenter[x][y];
-                        counter --;
-                    }
-                    (**clusterOfCenter[x][y]).push_back(point);
-                }
-                    // if neigh4 is active and not neigh1-3 x,y belong in this neighborhood
-                else if (neigh4) {
-                    clusterOfCenter[x][y] = clusterOfCenter[x-1][y];
-                    (**clusterOfCenter[x][y]).push_back(point);
-                }
+                temp.at<Vec3b>(x, y) = tmp;
             }
         }
-        if (counter > 1) {
-            change = true;
-            bool first = true;
-            for (int i = 0; i < ptsOfCenter.size(); i++) {
-                if (ptsOfCenter[i].empty()) continue;
-                int averageX = 0, averageY = 0;
-                for (int j = 0; j < ptsOfCenter[i].size();j++) {
-                    averageX += ptsOfCenter[i][j].x;
-                    averageY += ptsOfCenter[i][j].y;
+        Mat img_gray;
+        cvtColor( temp, img_gray, CV_BGR2GRAY );
+        blur( img_gray, img_gray, Size(3,3) );
+        Printer::printImg(img_gray, "gray_and_blur");
+        Mat canny_output;
+        vector<vector<Point> > contours;
+        vector<Vec4i> hierarchy;
+        /// Detect edges using canny
+        Canny( img_gray, canny_output, 100, 100*2, 3 );
+        stringstream file;
+        file << "contours" << i;
+        Printer::printImg(img_gray, file.str());
+        // Find contours (RETR_External ignoring child/parent cause kmeans can't deal with it anyways)
+        // CHAIN_APPROX NONE to draw it easier manually
+        findContours( canny_output, contours, hierarchy, RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0) );
+        cout<< "contours size: " << contours.size() << endl;
+        Printer::printCountours(img,contours);
+        bool background = false;
+        bool newCenters = false;
+        for( int t = 0; t< contours.size(); t++ ) {
+            int x = 0, y = 0;
+            for (int j = 0; j < contours[t].size(); j++) {
+                x += contours[t][j].x;
+                y += contours[t][j].y;
+            }
+            x /= contours[t].size();
+            y /= contours[t].size();
+            background = true;
+            // if the contour surrounds only a black polygon, this cluster seems to be the background
+            for (int l = 0; l < 3; l++) {
+                for (int j = 0; j < 3; j++) {
+                    if (!(img_gray.at<Vec3b>(x+l,y+j) == Vec3b(0,0,0))) background = false;
                 }
-                averageX /= ptsOfCenter[i].size();
-                averageY /= ptsOfCenter[i].size();
-                if (first) {
-                    (*centers)[center] = Vec6f((*centers)[center][0],(*centers)[center][1],(*centers)[center][2],
-                                            averageX,averageY);
-                    first = false;
+            }
+            if (background) break;
+            else {
+                if (!newCenters) {
+                    (*centers)[i] = Vec6f((*centers)[i][0],(*centers)[i][1],(*centers)[i][2],x,y,0);
+                    newCenters = true;
                 }
                 else {
-                    Vec6f temp = Vec6f((*centers)[center][0],(*centers)[center][1],(*centers)[center][2],
-                                       averageX,averageY);
-                    centers->push_back(temp);
+                    Vec6f newCenter = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], x, y, 0);
+                    centers->push_back(newCenter);
                 }
             }
-            kmeans->kMeansAlgorithm(img,center, initialCentersize);
         }
+        if (background) continue;
+        if (contours.size() > 1) change = true;
+        Calculator* pixEucCalculator = new PixEucCalculator(temp.rows, temp.cols);
+        kmeans->kMeansAlgorithm(img, pixEucCalculator);
     }
     return change;
 }

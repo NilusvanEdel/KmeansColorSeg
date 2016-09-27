@@ -19,9 +19,9 @@ int main(int argc, char* argv[])
     else
     {
         std::vector<Mat> frames = vidCap.readFrames();
-        Calculator* calculator = new PixEucCalculator(frames[0].rows, frames[0].cols);
+        Calculator* calculator = new EuclidianCalculator(frames[0].rows, frames[0].cols);
         KMeansClus kmeans(frames, calculator, false);
-        //kmeans.startClustering();
+        // kmeans.startClustering();
         delete calculator;
     }
     return 0;

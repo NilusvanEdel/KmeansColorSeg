@@ -24,6 +24,8 @@ public:
     //image printing for debugging, prints one cluster after the other
     void static debugPrintImg(Mat img, string filename, int clusterCount,
                               vector <vector<int>> memberOfCluster, vector<Vec6f> centers);
+    // print the countour image
+    void static printCountours(Mat img, vector <vector<Point>> contours);
 };
 
 

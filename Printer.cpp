@@ -67,3 +67,26 @@ void Printer::debugPrintImg(Mat img, string filename, int clusterCount,
         counter ++;
     }
 }
+void Printer::printCountours(Mat img, vector<vector<Point>> contours) {
+    Mat temp (img.size(),img.type());
+    Vec3b tmp = Vec3b(255,255,255);
+    for (int y = 0; y < img.cols; y++) {
+        for (int x = 0; x < img.rows; x++) {
+            temp.at<Vec3b>(x, y) = tmp;
+        }
+    }
+    Mat temp2;
+    temp.copyTo(temp2);
+    tmp = Vec3b(0,0,0);
+    for( int i = 0; i< contours.size(); i++ ) {
+        stringstream file;
+        string filedest = "/home/nilus/test/";
+        for (int j = 0; j < contours[i].size(); j++) {
+            temp.at<Vec3b>(contours[i][j].x,contours[i][j].y) = tmp;
+        }
+        file << filedest << "contours" << i <<".jpg";
+        imwrite(file.str(),temp);
+        temp2.copyTo(temp);
+    }
+
+}
