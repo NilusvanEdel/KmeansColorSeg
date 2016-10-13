@@ -25,7 +25,7 @@ public:
     void static splitCluster(Mat img, Calculator* calculator, vector<Vec6f>* centers,
                              vector <vector<int>>* memberOfCluster);
 private:
-    int const static kMax = 15;
+    int const static kMax = 10;
 };
 
 

@@ -16,7 +16,7 @@ class KMeansClus
 public:
     // Constructor where the optimal number of k is calculated automatically
     KMeansClus(vector<Mat> frames, Calculator* calculator, bool realVid);
-    // Constructor with given k-number
+    // Constructor with given k-number (only clusters the first image)
     KMeansClus(vector<Mat> frames, int k, Calculator* calculator, bool realVid);
     ~KMeansClus();
     // the usage of the kmean algorithm

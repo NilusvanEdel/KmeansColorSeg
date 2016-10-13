@@ -11,6 +11,7 @@ HSVEucCalculator::HSVEucCalculator(int maxX, int maxY) {
 
 float HSVEucCalculator::distance(Vec5f vec1, Vec5f vec2) {
     float result = 0;
+    /*
     // distanceColor calculation using every attribute with a relation of 1:1
     for (int i = 0; i < 2; i++) {
         // the enumarator has to be unequal to zero
@@ -18,6 +19,9 @@ float HSVEucCalculator::distance(Vec5f vec1, Vec5f vec2) {
             result += (pow((vec1[i] - vec2[i]), 2));
         }
     }
+     */
+    result += (pow((vec1[0] - vec2[0]), 2));
+    result += (pow((vec1[2] - vec2[2]), 2));
     return sqrt(result);
 }
 float HSVEucCalculator::distance(Vec5f vec1, Vec6f vec2) {
@@ -33,9 +37,13 @@ float HSVEucCalculator::distance(Vec6f vec1, Vec5f vec2) {
 
 Vec5f HSVEucCalculator::variance(Vec5f vec1, Vec6f vec2) {
     Vec5f variance(0,0,0,0,0);
+    /*
     for (int i = 0; i < 2; i++) {
-        variance[i] = pow(vec1.val[i]-vec2.val[i],2);;
+        variance[i] = pow(vec1.val[i] - vec2.val[i], 2);
     }
+    */
+    variance[0] = pow(vec1.val[0]-vec2.val[0],2);
+    variance[2] = pow(vec1.val[2]-vec2.val[2],2);
     return variance;
 }
 Vec5f HSVEucCalculator::variance(Vec6f vec1, Vec5f vec2) {

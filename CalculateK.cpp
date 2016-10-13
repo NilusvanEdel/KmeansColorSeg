@@ -104,11 +104,9 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     *centers = (*bestCenters)[bestK-2];
     kmeans->kMeansAlgorithm(img);
     cout << "best k before NeighborCheck: " << bestK << endl;
-    /*
     CalculateK::neighborCheck(img, centers, kmeans, memberOfCluster, calculator);
     bestK = centers->size();
     cout << "best k after NeighborCheck: " << bestK << endl;
-     */
     Printer::debugPrintImg(img, "finalK_", bestK, *memberOfCluster, *centers);
     Printer::printImg(img, "finalK", *memberOfCluster, *centers);
     return bestK;
@@ -140,54 +138,75 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
         }
         Mat img_gray;
         cvtColor( temp, img_gray, CV_BGR2GRAY );
-        blur( img_gray, img_gray, Size(3,3) );
+        equalizeHist(img_gray, img_gray);
+        blur( img_gray, img_gray, Size(2,2) );
+        //blured grayscale image to binary image
+        Mat binaryMat(img_gray.size(), img_gray.type());
+        //Apply thresholding
+        threshold(img_gray, binaryMat, 100, 255, THRESH_BINARY);
         Printer::printImg(img_gray, "gray_and_blur");
+        Printer::printImg(binaryMat, "binary");
         Mat canny_output;
         vector<vector<Point> > contours;
         vector<Vec4i> hierarchy;
         /// Detect edges using canny
-        Canny( img_gray, canny_output, 100, 100*2, 3 );
+        Canny( binaryMat, canny_output, 100, 100*2, 3 );
         stringstream file;
         file << "contours" << i;
-        Printer::printImg(img_gray, file.str());
+        Printer::printImg(binaryMat, file.str());
         // Find contours (RETR_External ignoring child/parent cause kmeans can't deal with it anyways)
         // CHAIN_APPROX NONE to draw it easier manually
         findContours( canny_output, contours, hierarchy, RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0) );
         cout<< "contours size: " << contours.size() << endl;
+        if (contours.size() == 1) continue;
         Printer::printCountours(img,contours);
         bool background = false;
         bool newCenters = false;
+        int x = 0; int y = 0;
         for( int t = 0; t< contours.size(); t++ ) {
-            int x = 0, y = 0;
+            // if the contour surrounds only a black polygon, this cluster seems to be the background
+            x = 0;
+            y = 0;
             for (int j = 0; j < contours[t].size(); j++) {
                 x += contours[t][j].x;
                 y += contours[t][j].y;
             }
             x /= contours[t].size();
             y /= contours[t].size();
-            background = true;
-            // if the contour surrounds only a black polygon, this cluster seems to be the background
-            for (int l = 0; l < 3; l++) {
-                for (int j = 0; j < 3; j++) {
-                    if (!(img_gray.at<Vec3b>(x+l,y+j) == Vec3b(0,0,0))) background = false;
-                }
+            if ((int)binaryMat.at<uchar>(y,x) == 255) {
+                background = true;
             }
-            if (background) break;
-            else {
+            if (!background) {
                 if (!newCenters) {
-                    (*centers)[i] = Vec6f((*centers)[i][0],(*centers)[i][1],(*centers)[i][2],x,y,0);
-                    newCenters = true;
+                    (*centers)[i] = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
                 }
                 else {
-                    Vec6f newCenter = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], x, y, 0);
+                    Vec6f newCenter = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
                     centers->push_back(newCenter);
                 }
+                for (int y = 0; y < img.cols; y++) {
+                    for (int x = 0; x < img.rows; x++) {
+                        if ((*memberOfCluster)[x][y] == i) {
+                            if (pointPolygonTest(contours[t], Point(y, x), false) >= 0) {
+                                if (newCenters) (*memberOfCluster)[x][y] = centers->size()-1;
+                                (*centers)[(*memberOfCluster)[x][y]][5]++;
+                            }
+                        }
+                    }
+                }
+                newCenters = true;
             }
+            else break;
         }
-        if (background) continue;
+        if (background) {
+            cout << "Background at cluster: " << i << endl;
+            continue;
+        }
         if (contours.size() > 1) change = true;
+        /* initially planned to assign the new clusters via k_Means
         Calculator* pixEucCalculator = new PixEucCalculator(temp.rows, temp.cols);
         kmeans->kMeansAlgorithm(img, pixEucCalculator);
+        */
     }
     return change;
 }
@@ -241,7 +260,7 @@ void CalculateK::splitCluster(Mat img, Calculator* calculator, vector<Vec6f>* ce
             for (int i = 0; i < 3; i++) {
                 if (img.at<Vec3b> (x, y)[i] < minColAndPixSpace[cluster][i])
                     minColAndPixSpace[cluster][i] = img.at<Vec3b> (x, y)[i];
-                if (img.at<Vec3b>(y, x)[i] > maxColAndPixSpace[cluster][i])
+                if (img.at<Vec3b>(x, y)[i] > maxColAndPixSpace[cluster][i])
                     maxColAndPixSpace[cluster][i] = img.at<Vec3b>(x, y)[i];
             }
             if (x < minColAndPixSpace[cluster][3]) minColAndPixSpace[cluster][3] = x;

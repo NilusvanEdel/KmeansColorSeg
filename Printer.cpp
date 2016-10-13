@@ -12,7 +12,7 @@ using namespace cv;
 void Printer::printImg(Mat img, string filename) {
     stringstream file;
     string filedest = "/home/nilus/test/";
-    file << filedest << filename << ".jpg";
+    file << filedest << filename << ".png";
     imwrite(file.str(),img);
 }
 
@@ -31,7 +31,7 @@ void Printer::printImg(Mat img, string filename, vector <vector<int>> memberOfCl
         }
     }
     stringstream file;
-    file << filedest << filename << ".jpg";
+    file << filedest << filename << ".png";
     imwrite(file.str(),temp);
 }
 void Printer::debugPrintImg(Mat img, string filename, int clusterCount,
@@ -62,7 +62,7 @@ void Printer::debugPrintImg(Mat img, string filename, int clusterCount,
             }
         }
         stringstream file;
-        file << folder.str() << filename << clusterCount << "cluster_" << counter<< ".jpg";
+        file << folder.str() << filename << clusterCount << "cluster_" << counter<< ".png";
         imwrite(file.str(),temp);
         counter ++;
     }
@@ -82,9 +82,9 @@ void Printer::printCountours(Mat img, vector<vector<Point>> contours) {
         stringstream file;
         string filedest = "/home/nilus/test/";
         for (int j = 0; j < contours[i].size(); j++) {
-            temp.at<Vec3b>(contours[i][j].x,contours[i][j].y) = tmp;
+            temp.at<Vec3b>(contours[i][j].y,contours[i][j].x) = tmp;
         }
-        file << filedest << "contours" << i <<".jpg";
+        file << filedest << "contours" << i <<".png";
         imwrite(file.str(),temp);
         temp2.copyTo(temp);
     }
