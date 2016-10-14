@@ -247,4 +247,79 @@ void KMeansClus::setCalculator(Calculator *calculator) {
     this->calculator = calculator;
 }
 
-
+void KMeansClus::kMeansLimitedAlgorithm(Mat img, vector <vector<int>>* memberOfCluster, Calculator* calculator,
+                                         vector <int> limitedCluster) {
+    // the index of this array assigns the pixels of frames[i] to the corresponding clusters
+    int changes;
+    float limitChanges = (float)(img.cols*img.rows);
+    limitChanges*=0.001;
+    int counter = 0;
+    do
+    {
+        counter ++;
+        changes = 0;
+        Vec5i ColorAndPixelSpace;
+        for (int y = 0; y < img.cols; y++)
+        {
+            bool partOfCluster;
+            for (int x = 0; x < img.rows; x++)
+            {
+                partOfCluster = false;
+                for (int i = 0; i < limitedCluster.size(); i++) {
+                    if ((*memberOfCluster)[x][y] == limitedCluster[i]) {
+                        partOfCluster = true;
+                    }
+                }
+                if (!partOfCluster) continue;
+                Vec3b tmp = img.at<Vec3b>(x, y);
+                for (int i = 0; i < 3; i++) ColorAndPixelSpace[i]=(int)tmp[i];
+                ColorAndPixelSpace[3] = x;
+                ColorAndPixelSpace[4] = y;
+                int cluster = limitedCluster[0];
+                float min = calculator->distance((Vec5f)ColorAndPixelSpace, centers[cluster]);
+                int i = cluster;
+                for (int i = 1; i < limitedCluster.size(); i++){
+                    float distance = calculator->distance(ColorAndPixelSpace,centers[limitedCluster[i]]);
+                    if (distance < min)
+                    {
+                        min = distance;
+                        cluster = limitedCluster[i];
+                    }
+                }
+                if ((*memberOfCluster)[x][y] != cluster)
+                {
+                    (*memberOfCluster)[x][y] = cluster;
+                    changes++;
+                }
+            }
+            if (!partOfCluster) continue;
+        }
+        // calculate new centers
+        vector<Vec6f> newCenters(centers.size());
+        std::fill(newCenters.begin(), newCenters.end(), Vec6f(0,0,0,0,0,0));
+        for (int y = 0; y < img.cols; y++)
+        {
+            for (int x = 0; x < img.rows; x++)
+            {
+                int cluster = (*memberOfCluster)[x][y];
+                Vec3b tmp = img.at<Vec3b>(x, y);
+                newCenters[cluster] += Vec6f(tmp[0],tmp[1],tmp[2],x,y,0);
+                newCenters[cluster](5)++;
+            }
+        }
+        for (int i = 0; i < centers.size(); i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                if (newCenters[i](5) > 0) newCenters[i](j) /= newCenters[i](5);
+                if (newCenters[i](j) < 0) newCenters[i](j) = 0;
+                if (j < 3 ) if (newCenters[i](j) > 255) newCenters[i](j) = 255;
+                if (j==3) if (newCenters[i](j) > calculator->getMaxX()) newCenters[i](j) = calculator->getMaxX();
+                if (j==4) if (newCenters[i](j) > calculator->getMaxY()) newCenters[i](j) = calculator->getMaxY();
+            }
+            if (newCenters[i](5) > 0) centers[i] = newCenters[i];
+            else centers[i](5)= 0;
+        }
+        if (counter > 10) limitChanges = pow(limitChanges,2);
+    } while (changes > limitChanges);
+}

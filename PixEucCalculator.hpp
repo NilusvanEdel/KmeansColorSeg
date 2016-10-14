@@ -33,7 +33,7 @@ private:
     int maxColorDis = 255;
     int maxX;
     int maxY;
-    float scaling = 0.004;
+    float scaling = 0.05;
 
 };
 

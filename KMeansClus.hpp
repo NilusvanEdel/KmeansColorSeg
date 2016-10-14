@@ -25,6 +25,8 @@ public:
     // otherwise it will split the selectedCluster according to its center and the center of centers.size()-1
     void kMeansAlgorithm(Mat img);
     void kMeansAlgorithm(Mat img, Calculator* calculator);
+    void kMeansLimitedAlgorithm(Mat img, vector <vector<int>>* memberOfCluster, Calculator* calculator,
+                                             vector <int> limitedCluster);
     // returns the current validity
     float getValidity (Mat img);
     //  set Calculator

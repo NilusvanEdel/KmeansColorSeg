@@ -76,17 +76,23 @@ void Printer::printCountours(Mat img, vector<vector<Point>> contours) {
         }
     }
     Mat temp2;
+    Mat temp3;
     temp.copyTo(temp2);
+    temp.copyTo(temp3);
     tmp = Vec3b(0,0,0);
     for( int i = 0; i< contours.size(); i++ ) {
         stringstream file;
         string filedest = "/home/nilus/test/";
         for (int j = 0; j < contours[i].size(); j++) {
             temp.at<Vec3b>(contours[i][j].y,contours[i][j].x) = tmp;
+            temp3.at<Vec3b>(contours[i][j].y,contours[i][j].x) = tmp;
         }
         file << filedest << "contours" << i <<".png";
         imwrite(file.str(),temp);
         temp2.copyTo(temp);
     }
-
+    stringstream file;
+    string filedest = "/home/nilus/test/";
+    file << filedest << "all_contours.png";
+    imwrite(file.str(),temp3);
 }

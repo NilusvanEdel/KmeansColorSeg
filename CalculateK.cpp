@@ -8,6 +8,7 @@
 #include "EuclidianCalculator.hpp"
 #include "Printer.hpp"
 #include "PixEucCalculator.hpp"
+#include "CoordEucCalculator.hpp"
 
 int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* centers, KMeansClus* kmeans,
                            vector <vector<int>>* memberOfCluster, bool realVid, vector<vector <Vec6f>>* bestCenters) {
@@ -173,9 +174,21 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
             }
             x /= contours[t].size();
             y /= contours[t].size();
-            if ((int)binaryMat.at<uchar>(y,x) == 255) {
-                background = true;
+
+            //if (pointPolygonTest(contours[t], Point(y, x), false) < 0) background = true;
+            //else if ((*memberOfCluster)[x][y] != i) background = true;
+
+            background = true;
+            for (int z = -1; z < 2; z++) {
+                for (int l = -1; l < 2; l++) {
+                    int xTmp = contours[t][0].y;
+                    int yTmp = contours[t][0].x;
+                    if (pointPolygonTest(contours[t], Point(yTmp + z, xTmp + l), false) > 0) {
+                        if ((*memberOfCluster)[xTmp + l][yTmp + z] == i) background = false;
+                    }
+                }
             }
+
             if (!background) {
                 if (!newCenters) {
                     (*centers)[i] = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
@@ -203,9 +216,15 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
             continue;
         }
         if (contours.size() > 1) change = true;
-        /* initially planned to assign the new clusters via k_Means
-        Calculator* pixEucCalculator = new PixEucCalculator(temp.rows, temp.cols);
-        kmeans->kMeansAlgorithm(img, pixEucCalculator);
+        // assign the new clusters via k_Means
+        /*
+        Calculator* coordEucCalculator = new PixEucCalculator(temp.rows, temp.cols);
+        vector <int> limitedCluster;
+        limitedCluster.push_back(i);
+        for (int cl = centers->size() - initialCentersize; cl < centers->size(); cl++) {
+            limitedCluster.push_back(cl);
+        }
+        kmeans->kMeansLimitedAlgorithm(img, memberOfCluster, coordEucCalculator,limitedCluster);
         */
     }
     return change;
