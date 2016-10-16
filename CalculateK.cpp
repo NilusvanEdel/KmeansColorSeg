@@ -105,15 +105,16 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     *centers = (*bestCenters)[bestK-2];
     kmeans->kMeansAlgorithm(img);
     cout << "best k before NeighborCheck: " << bestK << endl;
-    CalculateK::neighborCheck(img, centers, kmeans, memberOfCluster, calculator);
+    /*CalculateK::neighborCheck(img, centers, kmeans, memberOfCluster, calculator);
     bestK = centers->size();
     cout << "best k after NeighborCheck: " << bestK << endl;
     Printer::debugPrintImg(img, "finalK_", bestK, *memberOfCluster, *centers);
+    */
     Printer::printImg(img, "finalK", *memberOfCluster, *centers);
     return bestK;
 }
 
-//todo implement polyfit
+
 bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans,
                                vector <vector<int>>* memberOfCluster, Calculator* calculator) {
     bool change = false;
@@ -175,9 +176,6 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
             x /= contours[t].size();
             y /= contours[t].size();
 
-            //if (pointPolygonTest(contours[t], Point(y, x), false) < 0) background = true;
-            //else if ((*memberOfCluster)[x][y] != i) background = true;
-
             background = true;
             for (int z = -1; z < 2; z++) {
                 for (int l = -1; l < 2; l++) {
@@ -188,34 +186,33 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
                     }
                 }
             }
-
-            if (!background) {
-                if (!newCenters) {
-                    (*centers)[i] = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
-                }
-                else {
-                    Vec6f newCenter = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
-                    centers->push_back(newCenter);
-                }
-                for (int y = 0; y < img.cols; y++) {
-                    for (int x = 0; x < img.rows; x++) {
-                        if ((*memberOfCluster)[x][y] == i) {
-                            if (pointPolygonTest(contours[t], Point(y, x), false) >= 0) {
-                                if (newCenters) (*memberOfCluster)[x][y] = centers->size()-1;
-                                (*centers)[(*memberOfCluster)[x][y]][5]++;
-                            }
-                        }
-                    }
-                }
-                newCenters = true;
-            }
-            else break;
         }
         if (background) {
             cout << "Background at cluster: " << i << endl;
-            continue;
+            break;
         }
-        if (contours.size() > 1) change = true;
+
+        if (!background) {
+            if (!newCenters) {
+                (*centers)[i] = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
+            }
+            else {
+                Vec6f newCenter = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
+                centers->push_back(newCenter);
+            }
+            for (int y = 0; y < img.cols; y++) {
+                for (int x = 0; x < img.rows; x++) {
+                    if ((*memberOfCluster)[x][y] == i) {
+                        if (pointPolygonTest(contours[i], Point(y, x), false) >= 0) {
+                            if (newCenters) (*memberOfCluster)[x][y] = centers->size() - 1;
+                            (*centers)[(*memberOfCluster)[x][y]][5]++;
+                        }
+                    }
+                }
+            }
+            newCenters = true;
+        }
+        change = true;
         // assign the new clusters via k_Means
         /*
         Calculator* coordEucCalculator = new PixEucCalculator(temp.rows, temp.cols);

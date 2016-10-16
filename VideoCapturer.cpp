@@ -54,7 +54,7 @@ vector<Mat> VideoCapturer::readFrames()
             //save frames as jpeg
             stringstream filename;
             stringstream filename_hsv;
-            filename << "original" << counter;
+            filename << "simple_VidExample" << counter;
             Printer::printImg(tmp,filename.str());
             if (hsv) {
                 cvtColor(tmp, tmp, COLOR_BGR2HSV);
