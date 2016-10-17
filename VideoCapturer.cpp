@@ -3,6 +3,7 @@
 //
 
 #include <opencv2/imgproc.hpp>
+#include <boost/filesystem.hpp>
 #include "VideoCapturer.hpp"
 #include "Printer.hpp"
 
@@ -15,55 +16,73 @@ VideoCapturer::VideoCapturer(string filen, string filed, bool hsv)
     filedest = filed;
     double fps = 0;
     VideoCapture cap;
+    boost::filesystem::path path (filen);
+    if(boost::filesystem::is_directory(path)) video = false;
+    else video = true;
     this->hsv=hsv;
 }
 VideoCapturer::~VideoCapturer()
 {
-    vector<Mat>().swap(frames);
 }
 int VideoCapturer::readVideo()
 {
-    cap = VideoCapture(filename); // open the video file for reading
-    int counter = 0;
+    if (video) {
+        cap = VideoCapture(filename); // open the video file for reading
+        int counter = 0;
 
-    if ( !cap.isOpened() )  // if not success, exit program
-    {
-    cout << "Cannot open the video file" << endl;
-    return -1;
+        if (!cap.isOpened())  // if not success, exit program
+        {
+            cout << "Cannot open the video file" << endl;
+            return -1;
+        }
+
+        //cap.set(CV_CAP_PROP_POS_MSEC, 300); //start the video at 300ms
+
+        // fps = cap.get(CV_CAP_PROP_FPS); //get the frames per seconds of the video
+
+        // cout << "Frame per seconds : " << fps << endl;
     }
-
-    //cap.set(CV_CAP_PROP_POS_MSEC, 300); //start the video at 300ms
-
-    // fps = cap.get(CV_CAP_PROP_FPS); //get the frames per seconds of the video
-
-    // cout << "Frame per seconds : " << fps << endl;
     return 0;
 }
 
 vector<Mat> VideoCapturer::readFrames()
 {
     int counter = 0;
+    size_t i= 0;
+    vector<cv::String> filenames; // notice the Opencv's embedded "String" class
+    cv::String folder = filename;
+    if (!video) {
+        glob(folder, filenames);
+    }
     while(1)
         {
             Mat tmp;
-            cap >> tmp;
-            if(tmp.empty()) {
-            //cout << "scanned all frames" << endl;
-            break;
+            if (video) {
+                cap >> tmp;
+                if (tmp.empty()) {
+                    //cout << "scanned all frames" << endl;
+                    break;
+                }
+            }
+            else {
+                    tmp = imread(filenames[i]);
+                    if(!tmp.data)
+                        break;
             }
             //save frames as jpeg
             stringstream filename;
             stringstream filename_hsv;
-            filename << "simple_VidExample" << counter;
-            Printer::printImg(tmp,filename.str());
+            filename << "original" << counter;
+            Printer::printImg(tmp, filename.str());
             if (hsv) {
                 cvtColor(tmp, tmp, COLOR_BGR2HSV);
                 filename_hsv << "original_hsv" << counter;
-                Printer::printImg(tmp,filename_hsv.str());
+                Printer::printImg(tmp, filename_hsv.str());
             }
             frames.push_back(tmp);
+            i++;
             counter++;
-
+            /*
             vector<Vec3b> numberOfColors;
             for (int y = 0; y < tmp.cols; y++) {
                 for (int x = 0; x < tmp.rows; x++) {
@@ -82,6 +101,7 @@ vector<Mat> VideoCapturer::readFrames()
                 }
             }
             cout << "Used color in Image: " << numberOfColors.size() << endl;
+             */
 
             if(waitKey(30) == 27) //wait for 'esc' key press for 30 ms. If 'esc' key is pressed, break loop
             {
@@ -89,6 +109,7 @@ vector<Mat> VideoCapturer::readFrames()
                 break;
         }
     }
+    cout << frames.size() << "frames" << endl;
     return frames;
 }
 

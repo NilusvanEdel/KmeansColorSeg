@@ -27,10 +27,8 @@ KMeansClus::KMeansClus(vector<Mat> frames, Calculator* calculator, bool realVid)
         }
     }
     CalculateK::calculateK(frames[0], calculator, &centers, this, &memberOfCluster, realVid, &bestCenters);
-    cout << "debugZweck" << endl;
 }
 
-//todo fix it, currently not workign due to BestK
 KMeansClus::KMeansClus(vector<Mat> frames,int k, Calculator* calculator, bool realVid) {
     this->calculator = calculator;
     this->realVid = realVid;
@@ -78,82 +76,105 @@ KMeansClus::~KMeansClus() {
 void KMeansClus::startClustering() {
     // begin of the loop
     superClusterPosition.resize(frames.size());
-    for (int frameCounter = 0; frameCounter < frames.size(); frameCounter++)
+    for (int i = 0; i < centers.size(); i++) {
+        supercenters.push_back(centers[i]);
+        superClusterPosition[0].push_back(i);
+    }
+    stringstream filename;
+    filename << "clustered0" ;
+    Printer::debugPrintImg(frames[0], "testForK_", centers.size(), memberOfCluster, centers);
+    Printer::printImg(frames[0],filename.str(),memberOfCluster,centers);
+    cout << "frame: " << 0 <<" written" << endl;
+    for (int frameCounter = 1; frameCounter < frames.size(); frameCounter++)
     {
+        // bestk size = 0 equals k = 2
+        int currentBestk = centers.size();
+        float validityKSmaller = INT_MAX;
+        if (currentBestk > 2) {
+            centers = bestCenters[currentBestk-4];
+            kMeansAlgorithm(frames[frameCounter]);
+            bestCenters[currentBestk-4] = centers;
+            CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
+        }
+        else if (currentBestk == 2) {
+            centers = bestCenters[currentBestk - 3];
+        }
+        if (currentBestk >= 2) {
+            kMeansAlgorithm(frames[frameCounter]);
+            bestCenters[currentBestk - 3] = centers;
+            validityKSmaller = getValidity(frames[frameCounter]);
+            CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
+        }
         kMeansAlgorithm(frames[frameCounter]);
         float validity = CalculateK::getValidity(frames[frameCounter], calculator, &centers, &memberOfCluster);
-        int currentBestk = centers.size();
-        // bestk size = 0 equals k = 2
         bestCenters[currentBestk-2] = centers;
-        CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
-        kMeansAlgorithm(frames[frameCounter]);
-        float validityKBigger = getValidity(frames[frameCounter]);
-        centers = bestCenters[currentBestk-3];
-        kMeansAlgorithm(frames[frameCounter]);
-        //todo implement a better way for checking for smaller k
-        float validityKSmaller = getValidity(frames[frameCounter]);
+        vector <vector<int>> memberOfClusterTemp(memberOfCluster);
+        float validityKBigger = INT_MAX;
+        if (currentBestk < bestCenters.size()) {
+            CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
+            kMeansAlgorithm(frames[frameCounter]);
+            validityKBigger = getValidity(frames[frameCounter]);
+            bestCenters[currentBestk-1] = centers;
+        }
         centers = bestCenters[currentBestk-2];
+        memberOfCluster = memberOfClusterTemp;
         // if k is still a local Minima
-        if (!(validity <= validityKBigger && validity <= validityKSmaller)) {
+        if (!(validity <= validityKBigger && validity < validityKSmaller)) {
             cout << "new K Calculation" << endl;
             CalculateK::calculateK(frames[frameCounter], calculator,
                                    &centers, this, &memberOfCluster, realVid, &bestCenters);
         }
-        /* toggle for correct results
-        CalculateK::calculateK(frames[frameCounter], calculator,
-                               &centers, this, &memberOfCluster, realVid, &bestCenters);
-        */
+
+        // toggle for correct results
+        /*CalculateK::calculateK(frames[frameCounter], calculator,
+                               &centers, this, &memberOfCluster, realVid, &bestCenters); */
+
         // if no superclusters exist, the first centers will be the first superclusters
-        if (frameCounter == 0) {
-            for (int i = 0; i < centers.size(); i++) {
-                supercenters.push_back(centers[i]);
-                superClusterPosition[frameCounter].push_back(i);
-            }
-        }
         // check which new clusters belong to which supercluster or if they need to create a new one
-        else {
-            for (int j = 0; j < centers.size(); j++) {
-                float mindistance = 99999999;
-                int index = -1;
-                int maxX = frames[frameCounter].rows;
-                int maxY = frames[frameCounter].cols;
-                // the delta which will determine whether it still belongs to the same supercluster
-                float delta = 0.15;
-                Vec5f deltaDisVector;
-                for (int i = 0; i < 5; i++) {
-                    if (i < 3) deltaDisVector[i] = 255 * delta;
-                    if (i == 3) deltaDisVector[i] == maxX * delta;
-                    if (i == 4) deltaDisVector[i] == maxY * delta;
-                }
-                float deltaDistance = calculator->distance(Vec5f(0,0,0,0,0), deltaDisVector);
-                deltaDistance += sqrt(pow(0 - deltaDisVector[3] / maxX * 255, 2) +
-                                      pow(0 - deltaDisVector[4] / maxY * 255, 2));
-                for (int i = 0; i < supercenters.size(); i++) {
-                    float distance_col = calculator->distance(centers[j],supercenters[i]);
-                    float distance_pix = sqrt(pow(centers[j](3) / maxX * 255 - supercenters[i](3) / maxX * 255, 2) +
-                                              pow(centers[j](4) / maxY * 255 - supercenters[i](4) / maxY * 255, 2));
-                    // check which supercluster is the closest one and whether it is in the deltazone
-                    float tmpDis = distance_col+distance_pix;
-                    if (tmpDis < mindistance && tmpDis <= deltaDistance ) {
-                        index = i;
-                        mindistance = tmpDis;
-                    }
-                }
-                // if no cluster was in the deltazone it is the beginning of a new supercluster
-                if (index == -1) {
-                    supercenters.push_back(centers[j]);
-                    index = supercenters.size()-1;
-                }
-                superClusterPosition[frameCounter].push_back(index);
+
+        for (int j = 0; j < centers.size(); j++) {
+            float mindistance = 99999999;
+            int index = -1;
+            int maxX = frames[frameCounter].rows;
+            int maxY = frames[frameCounter].cols;
+            // the delta which will determine whether it still belongs to the same supercluster
+            float delta = 0.15;
+            Vec5f deltaDisVector;
+            for (int i = 0; i < 5; i++) {
+                if (i < 3) deltaDisVector[i] = 255 * delta;
+                if (i == 3) deltaDisVector[i] == maxX * delta;
+                if (i == 4) deltaDisVector[i] == maxY * delta;
             }
-            // update supercenters
-            for (int i = 0; i < centers.size(); i++) {
-                int pos = superClusterPosition[frameCounter][i];
-                supercenters[pos] = centers[i];
+            float deltaDistance = calculator->distance(Vec5f(0,0,0,0,0), deltaDisVector);
+            deltaDistance += sqrt(pow(0 - deltaDisVector[3] / maxX * 255, 2) +
+                                  pow(0 - deltaDisVector[4] / maxY * 255, 2));
+            for (int i = 0; i < supercenters.size(); i++) {
+                float distance_col = calculator->distance(centers[j],supercenters[i]);
+                float distance_pix = sqrt(pow(centers[j](3) / maxX * 255 - supercenters[i](3) / maxX * 255, 2) +
+                                          pow(centers[j](4) / maxY * 255 - supercenters[i](4) / maxY * 255, 2));
+                // check which supercluster is the closest one and whether it is in the deltazone
+                float tmpDis = distance_col+distance_pix;
+                if (tmpDis < mindistance && tmpDis <= deltaDistance ) {
+                    index = i;
+                    mindistance = tmpDis;
+                }
             }
+            // if no cluster was in the deltazone it is the beginning of a new supercluster
+            if (index == -1) {
+                supercenters.push_back(centers[j]);
+                index = supercenters.size()-1;
+            }
+            superClusterPosition[frameCounter].push_back(index);
         }
+        // update supercenters
+        for (int i = 0; i < centers.size(); i++) {
+            int pos = superClusterPosition[frameCounter][i];
+            supercenters[pos] = centers[i];
+        }
+
         stringstream filename;
         filename << "clustered" << frameCounter;
+        Printer::debugPrintImg(frames[frameCounter], "testForK_", centers.size(), memberOfCluster, centers);
         Printer::printImg(frames[frameCounter],filename.str(),memberOfCluster,centers);
         cout << "frame: " <<frameCounter <<" written" << endl;
     }
@@ -168,6 +189,7 @@ void KMeansClus::startClustering() {
     }
     return;
 }
+
 void KMeansClus::kMeansAlgorithm(Mat img) {
     kMeansAlgorithm(img, this->calculator);
 }

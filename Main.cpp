@@ -14,7 +14,7 @@
 
 int main(int argc, char* argv[])
 {
-    VideoCapturer vidCap("/home/nilus/Videos/sample_changingK.avi","/home/nilus/test/",false);
+    VideoCapturer vidCap("/home/nilus/Videos/theft.avi","/home/nilus/test/",false);
     if (vidCap.readVideo() == -1) return -1;
     else
     {

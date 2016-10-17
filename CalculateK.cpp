@@ -12,6 +12,7 @@
 
 int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* centers, KMeansClus* kmeans,
                            vector <vector<int>>* memberOfCluster, bool realVid, vector<vector <Vec6f>>* bestCenters) {
+    cout << "start of calculation of K" << endl;
     centers->clear();
     bestCenters->clear();
     for (int i = 0; i < img.rows; ++i)
@@ -44,7 +45,7 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     // begin the loop to split the center with highest variance
     for (int k = 1; k < kMax; k++)
     {
-        cout << "K: " << k << endl;
+        // cout << "K: " << k << endl;
         splitCluster(img, calculator, centers, memberOfCluster);
         // reuse the kMeans algorithm and calculate the new intra and inter meassurments
         kmeans->kMeansAlgorithm(img);

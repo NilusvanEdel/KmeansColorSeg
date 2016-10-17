@@ -27,6 +27,8 @@ private:
     vector<Mat> frames;
     // for debugging, returns the type of img as string
     string type2str(int type);
+    // if true a video is expected, if false a folder including a videoSeq is expected
+    bool video;
     bool hsv;
 };
 
