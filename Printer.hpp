@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <string.h>
+#include <boost/filesystem/path.hpp>
 #include "opencv2/highgui/highgui.hpp"
 
 using namespace std;
@@ -18,14 +19,15 @@ using namespace cv;
 class Printer {
 public:
     // basic image printing
-    void static printImg(Mat img, string filename);
+    void static printImg(Mat img, boost::filesystem::path path, string filename);
     // image printing according to the clusters
-    void static printImg(Mat img, string filename, vector <vector<int>> memberOfCluster, vector<Vec6f> centers);
+    void static printImg(Mat img, boost::filesystem::path path ,
+                         string filename, vector <vector<int>> memberOfCluster, vector<Vec6f> centers);
     //image printing for debugging, prints one cluster after the other
-    void static debugPrintImg(Mat img, string filename, int clusterCount,
+    void static debugPrintImg(Mat img, boost::filesystem::path path, string filename, int clusterCount,
                               vector <vector<int>> memberOfCluster, vector<Vec6f> centers);
     // print the countour image
-    void static printCountours(Mat img, vector <vector<Point>> contours);
+    void static printCountours(Mat img, boost::filesystem::path path, vector <vector<Point>> contours);
 };
 
 

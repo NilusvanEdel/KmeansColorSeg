@@ -15,9 +15,10 @@ public:
     // calculate the optimal value of k
     // the calculated centers for each iteration are stored in bestCenters
     int static calculateK(Mat img, Calculator* calculator, vector<Vec6f>* centers, KMeansClus* kMeans,
-                          vector <vector<int>>* memberOfCluster, bool realVid, vector<vector <Vec6f>>* bestCenters);
+                          boost::filesystem::path path, vector <vector<int>>* memberOfCluster,
+                          bool realVid, vector<vector <Vec6f>>* bestCenters);
     // check whether the segmented clusters keep their neighborhoodproperties and if not it creates new clusters
-    bool static neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans,
+    bool static neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans, boost::filesystem::path path,
                               vector <vector<int>>* memberOfCluster, Calculator* calculator);
     // calculates the validity
     float static getValidity(Mat img, Calculator* calculator, vector<Vec6f>* centers,

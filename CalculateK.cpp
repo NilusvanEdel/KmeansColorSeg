@@ -11,8 +11,9 @@
 #include "CoordEucCalculator.hpp"
 
 int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* centers, KMeansClus* kmeans,
-                           vector <vector<int>>* memberOfCluster, bool realVid, vector<vector <Vec6f>>* bestCenters) {
-    cout << "start of calculation of K" << endl;
+                           boost::filesystem::path path,vector <vector<int>>* memberOfCluster,
+                           bool realVid, vector<vector <Vec6f>>* bestCenters) {
+    cout << "start calculation of K" << endl;
     centers->clear();
     bestCenters->clear();
     for (int i = 0; i < img.rows; ++i)
@@ -49,7 +50,7 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
         splitCluster(img, calculator, centers, memberOfCluster);
         // reuse the kMeans algorithm and calculate the new intra and inter meassurments
         kmeans->kMeansAlgorithm(img);
-        Printer::debugPrintImg(img, "testForK_", k+1, *memberOfCluster, *centers);
+        Printer::debugPrintImg(img, path, "testForK_", k+1, *memberOfCluster, *centers);
         float currentValidity = getValidity(img, calculator, centers, memberOfCluster);
         //save current center
         bestCenters->push_back(*centers);
@@ -111,12 +112,12 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     cout << "best k after NeighborCheck: " << bestK << endl;
     Printer::debugPrintImg(img, "finalK_", bestK, *memberOfCluster, *centers);
     */
-    Printer::printImg(img, "finalK", *memberOfCluster, *centers);
+    Printer::printImg(img, path, "finalK", *memberOfCluster, *centers);
     return bestK;
 }
 
 
-bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans,
+bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans, boost::filesystem::path path,
                                vector <vector<int>>* memberOfCluster, Calculator* calculator) {
     bool change = false;
     int initialCentersize = centers->size();
@@ -147,8 +148,8 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
         Mat binaryMat(img_gray.size(), img_gray.type());
         //Apply thresholding
         threshold(img_gray, binaryMat, 100, 255, THRESH_BINARY);
-        Printer::printImg(img_gray, "gray_and_blur");
-        Printer::printImg(binaryMat, "binary");
+        Printer::printImg(img_gray, path, "gray_and_blur");
+        Printer::printImg(binaryMat, path, "binary");
         Mat canny_output;
         vector<vector<Point> > contours;
         vector<Vec4i> hierarchy;
@@ -156,13 +157,13 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
         Canny( binaryMat, canny_output, 100, 100*2, 3 );
         stringstream file;
         file << "contours" << i;
-        Printer::printImg(binaryMat, file.str());
+        Printer::printImg(binaryMat, path, file.str());
         // Find contours (RETR_External ignoring child/parent cause kmeans can't deal with it anyways)
         // CHAIN_APPROX NONE to draw it easier manually
         findContours( canny_output, contours, hierarchy, RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0) );
         cout<< "contours size: " << contours.size() << endl;
         if (contours.size() == 1) continue;
-        Printer::printCountours(img,contours);
+        Printer::printCountours(img, path, contours);
         bool background = false;
         bool newCenters = false;
         int x = 0; int y = 0;

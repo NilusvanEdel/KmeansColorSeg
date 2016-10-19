@@ -10,14 +10,13 @@
 using namespace cv;
 using namespace std;
 
-VideoCapturer::VideoCapturer(string filen, string filed, bool hsv)
+VideoCapturer::VideoCapturer(string filen, boost::filesystem::path path, bool hsv)
 {
     filename = filen;
-    filedest = filed;
+    this->path = path;
     double fps = 0;
     VideoCapture cap;
-    boost::filesystem::path path (filen);
-    if(boost::filesystem::is_directory(path)) video = false;
+    if(boost::filesystem::is_directory(filename)) video = false;
     else video = true;
     this->hsv=hsv;
 }
@@ -45,7 +44,7 @@ int VideoCapturer::readVideo()
     return 0;
 }
 
-vector<Mat> VideoCapturer::readFrames()
+int VideoCapturer::readFrames()
 {
     int counter = 0;
     size_t i= 0;
@@ -71,15 +70,11 @@ vector<Mat> VideoCapturer::readFrames()
             }
             //save frames as jpeg
             stringstream filename;
-            stringstream filename_hsv;
-            filename << "original" << counter;
-            Printer::printImg(tmp, filename.str());
             if (hsv) {
                 cvtColor(tmp, tmp, COLOR_BGR2HSV);
-                filename_hsv << "original_hsv" << counter;
-                Printer::printImg(tmp, filename_hsv.str());
+                filename << "original" << counter;
+                Printer::printImg(tmp, path, filename.str());
             }
-            frames.push_back(tmp);
             i++;
             counter++;
             /*
@@ -109,8 +104,8 @@ vector<Mat> VideoCapturer::readFrames()
                 break;
         }
     }
-    cout << frames.size() << "frames" << endl;
-    return frames;
+    cout << counter << "frames" << endl;
+    return counter;
 }
 
 string VideoCapturer::type2str(int type) {

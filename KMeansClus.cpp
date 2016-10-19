@@ -2,6 +2,7 @@
 // Created by nilus on 10.06.16.
 //
 
+#include <boost/filesystem/operations.hpp>
 #include "KMeansClus.hpp"
 #include "Printer.hpp"
 #include "CoordEucCalculator.hpp"
@@ -12,34 +13,48 @@ typedef Vec<float, 6> Vec6f;
 typedef Vec<int, 5> Vec5i;
 typedef Vec<int, 6> Vec6i;
 
-KMeansClus::KMeansClus(vector<Mat> frames, Calculator* calculator, bool realVid) {
+KMeansClus::KMeansClus(Calculator* calculator, bool realVid, string fileLoc, string filedest) {
     this->calculator = calculator;
     this->realVid = realVid;
-    this->frames = frames;
-    memberOfCluster.resize(frames[0].rows);
-    for (int i = 0; i < frames[0].rows; ++i)
-        memberOfCluster[i].resize(frames[0].cols);
-    for (int y = 0; y < frames[0].cols; y++)
+    path = boost::filesystem::path(filedest);
+    this->fileLoc = boost::filesystem::path(fileLoc);
+    vector<cv::String> filenames; // notice the Opencv's embedded "String" class
+    cv::String folder = fileLoc;
+    glob(folder, filenames);
+    Mat img;
+    img = imread(filenames[0]);
+    memberOfCluster.resize(img.rows);
+    for (int i = 0; i < img.rows; ++i)
+        memberOfCluster[i].resize(img.cols);
+    for (int y = 0; y < img.cols; y++)
     {
-        for (int x = 0; x < frames[0].rows; x++)
+        for (int x = 0; x < img.rows; x++)
         {
             memberOfCluster[x][y] = 0;
         }
     }
-    CalculateK::calculateK(frames[0], calculator, &centers, this, &memberOfCluster, realVid, &bestCenters);
+    CalculateK::calculateK(img, calculator, &centers, this, path, &memberOfCluster,
+                           realVid, &bestCenters);
+    img.release();
 }
 
-KMeansClus::KMeansClus(vector<Mat> frames,int k, Calculator* calculator, bool realVid) {
+KMeansClus::KMeansClus(int k, Calculator* calculator, bool realVid, string fileLoc, string filedest) {
     this->calculator = calculator;
     this->realVid = realVid;
-    this->frames = frames;
+    path = boost::filesystem::path(filedest);
+    this->fileLoc = boost::filesystem::path(fileLoc);
     centers = vector<Vec6f>(k);
-    memberOfCluster.resize(frames[0].cols);
-    for (int i = 0; i < frames[0].rows; ++i)
-        memberOfCluster[i].resize(frames[0].cols);
-    for (int y = 0; y < frames[0].cols; y++)
+    vector<cv::String> filenames; // notice the Opencv's embedded "String" class
+    cv::String folder = fileLoc;
+    glob(folder, filenames);
+    Mat img;
+    img = imread(filenames[0]);
+    memberOfCluster.resize(img.cols);
+    for (int i = 0; i < img.rows; ++i)
+        memberOfCluster[i].resize(img.cols);
+    for (int y = 0; y < img.cols; y++)
     {
-        for (int x = 0; x < frames[0].rows; x++)
+        for (int x = 0; x < img.rows; x++)
         {
             memberOfCluster[x][y] = 0;
         }
@@ -57,63 +72,76 @@ KMeansClus::KMeansClus(vector<Mat> frames,int k, Calculator* calculator, bool re
         centers[i](4) = distribution3(generator);
         centers[i](5) = 0;
     }
-    kMeansAlgorithm(frames[0]);
-    Printer::debugPrintImg(frames[0], "testForK_", k, memberOfCluster, centers);
-    /*
-    kMeansAlgorithm(frames[0],-1, 0);
-    Printer::debugPrintImg(frames[0], "manualSelectedK", k, memberOfCluster, centers);
-    */
+    kMeansAlgorithm(img);
+    Printer::debugPrintImg(img, path, "testForK_", k, memberOfCluster, centers);
+    img.release();
 }
 
 //deallocator
 KMeansClus::~KMeansClus() {
-    vector<Mat>().swap(frames);
     vector<Vec6f>().swap(centers);
     vector<vector<int>>().swap(memberOfCluster);
 }
 
 
-void KMeansClus::startClustering() {
+void KMeansClus::startClustering(int frameCount) {
     // begin of the loop
-    superClusterPosition.resize(frames.size());
+    vector<cv::String> filenames; // notice the Opencv's embedded "String" class
+    cv::String folder = fileLoc.string();
+    glob(folder, filenames);
+    superClusterPosition.resize(frameCount);
     for (int i = 0; i < centers.size(); i++) {
         supercenters.push_back(centers[i]);
         superClusterPosition[0].push_back(i);
     }
+    Mat img;
+    img = imread(filenames[0]);
     stringstream filename;
     filename << "clustered0" ;
-    Printer::debugPrintImg(frames[0], "testForK_", centers.size(), memberOfCluster, centers);
-    Printer::printImg(frames[0],filename.str(),memberOfCluster,centers);
+    Printer::debugPrintImg(img, path, "testForK_", centers.size(), memberOfCluster, centers);
+    Printer::printImg(img,path, filename.str(),memberOfCluster,centers);
+
+
+    vecMemOfCluster = vector<vector<vector<int>>>(frameCount);
+    vecMemOfCluster[0]= memberOfCluster;
+    //toggle here and below to print all clusters
+    stringstream newFolder;
+    newFolder<<path.string() <<"/clusters_" << 0 <<"/";
+    boost::filesystem::create_directories(newFolder.str());
+    boost::filesystem::path newPath = boost::filesystem::path(newFolder.str());
+    Printer::debugPrintImg(img, newPath, "test_", centers.size(), memberOfCluster, centers);
+
     cout << "frame: " << 0 <<" written" << endl;
-    for (int frameCounter = 1; frameCounter < frames.size(); frameCounter++)
+    for (int frameCounter = 1; frameCounter < frameCount; frameCounter++)
     {
+        img = imread(filenames[frameCounter]);
         // bestk size = 0 equals k = 2
         int currentBestk = centers.size();
         float validityKSmaller = INT_MAX;
-        if (currentBestk > 2) {
-            centers = bestCenters[currentBestk-4];
-            kMeansAlgorithm(frames[frameCounter]);
-            bestCenters[currentBestk-4] = centers;
-            CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
+        if (currentBestk > 3) {
+            centers = bestCenters[currentBestk - 4];
+            kMeansAlgorithm(img);
+            bestCenters[currentBestk - 4] = centers;
+            CalculateK::splitCluster(img, calculator, &centers, &memberOfCluster);
         }
-        else if (currentBestk == 2) {
+        else if (currentBestk == 3) {
             centers = bestCenters[currentBestk - 3];
         }
-        if (currentBestk >= 2) {
-            kMeansAlgorithm(frames[frameCounter]);
+        if (currentBestk >= 3) {
+            kMeansAlgorithm(img);
             bestCenters[currentBestk - 3] = centers;
-            validityKSmaller = getValidity(frames[frameCounter]);
-            CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
+            validityKSmaller = getValidity(img);
+            CalculateK::splitCluster(img, calculator, &centers, &memberOfCluster);
         }
-        kMeansAlgorithm(frames[frameCounter]);
-        float validity = CalculateK::getValidity(frames[frameCounter], calculator, &centers, &memberOfCluster);
+        kMeansAlgorithm(img);
+        float validity = CalculateK::getValidity(img, calculator, &centers, &memberOfCluster);
         bestCenters[currentBestk-2] = centers;
         vector <vector<int>> memberOfClusterTemp(memberOfCluster);
         float validityKBigger = INT_MAX;
         if (currentBestk < bestCenters.size()) {
-            CalculateK::splitCluster(frames[frameCounter], calculator, &centers, &memberOfCluster);
-            kMeansAlgorithm(frames[frameCounter]);
-            validityKBigger = getValidity(frames[frameCounter]);
+            CalculateK::splitCluster(img, calculator, &centers, &memberOfCluster);
+            kMeansAlgorithm(img);
+            validityKBigger = getValidity(img);
             bestCenters[currentBestk-1] = centers;
         }
         centers = bestCenters[currentBestk-2];
@@ -121,13 +149,14 @@ void KMeansClus::startClustering() {
         // if k is still a local Minima
         if (!(validity <= validityKBigger && validity < validityKSmaller)) {
             cout << "new K Calculation" << endl;
-            CalculateK::calculateK(frames[frameCounter], calculator,
-                                   &centers, this, &memberOfCluster, realVid, &bestCenters);
+            CalculateK::calculateK(img, calculator, &centers, this,
+                                   path, &memberOfCluster,realVid, &bestCenters);
         }
 
-        // toggle for correct results
-        /*CalculateK::calculateK(frames[frameCounter], calculator,
-                               &centers, this, &memberOfCluster, realVid, &bestCenters); */
+        // toggle for correct results (will perform full dynamic clustercount algorithm on every frame)
+        //
+        /* CalculateK::calculateK(img, calculator,
+                               &centers, this, path, &memberOfCluster, realVid, &bestCenters); */
 
         // if no superclusters exist, the first centers will be the first superclusters
         // check which new clusters belong to which supercluster or if they need to create a new one
@@ -135,10 +164,9 @@ void KMeansClus::startClustering() {
         for (int j = 0; j < centers.size(); j++) {
             float mindistance = 99999999;
             int index = -1;
-            int maxX = frames[frameCounter].rows;
-            int maxY = frames[frameCounter].cols;
+            int maxX = img.rows;
+            int maxY = img.cols;
             // the delta which will determine whether it still belongs to the same supercluster
-            float delta = 0.15;
             Vec5f deltaDisVector;
             for (int i = 0; i < 5; i++) {
                 if (i < 3) deltaDisVector[i] = 255 * delta;
@@ -174,9 +202,17 @@ void KMeansClus::startClustering() {
 
         stringstream filename;
         filename << "clustered" << frameCounter;
-        Printer::debugPrintImg(frames[frameCounter], "testForK_", centers.size(), memberOfCluster, centers);
-        Printer::printImg(frames[frameCounter],filename.str(),memberOfCluster,centers);
+        Printer::debugPrintImg(img, path,"testForK_", centers.size(), memberOfCluster, centers);
+        Printer::printImg(img, path, filename.str(),memberOfCluster,centers);
         cout << "frame: " <<frameCounter <<" written" << endl;
+
+        vecMemOfCluster[frameCounter]= memberOfCluster;
+        //toggle to print all clusters
+        stringstream newFolder;
+        newFolder<<path.string() <<"/clusters_" << frameCounter <<"/";
+        boost::filesystem::create_directories(newFolder.str());
+        boost::filesystem::path newPath = boost::filesystem::path(newFolder.str());
+        Printer::debugPrintImg(img, newPath, "test_", centers.size(), memberOfCluster, centers);
     }
     cout << "Supercenter count: " << supercenters.size() << endl;
     for (int i = 0; i < superClusterPosition.size(); i++) {
@@ -186,6 +222,17 @@ void KMeansClus::startClustering() {
             cout << tmp << " ";
         }
         cout << endl;
+    }
+
+    // print only using the superClusters
+    for (int i = 0; i < superClusterPosition.size(); i++) {
+        for (int j = 0; j < superClusterPosition[i].size(); j++) {
+            centers.resize(superClusterPosition[i].size());
+            centers[j] = supercenters[superClusterPosition[i][j]];
+        }
+        stringstream superClusterPrintName;
+        superClusterPrintName << "superCluster_" << i;
+        Printer::printImg(img, path, superClusterPrintName.str(),vecMemOfCluster[i],centers);
     }
     return;
 }

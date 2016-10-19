@@ -9,15 +9,14 @@
 using namespace std;
 using namespace cv;
 
-void Printer::printImg(Mat img, string filename) {
+void Printer::printImg(Mat img,boost::filesystem::path path , string filename) {
     stringstream file;
-    string filedest = "/home/nilus/test/";
-    file << filedest << filename << ".png";
+    file << path.string() << filename << ".png";
     imwrite(file.str(),img);
 }
 
-void Printer::printImg(Mat img, string filename, vector <vector<int>> memberOfCluster, vector<Vec6f> centers) {
-    string filedest = "/home/nilus/test/";
+void Printer::printImg(Mat img, boost::filesystem::path path, string filename,
+                       vector <vector<int>> memberOfCluster, vector<Vec6f> centers) {
     Mat temp (img.size(),img.type());
     Vec3b tmp(0,0,0);
     for (int y = 0; y < img.cols; y++)
@@ -31,16 +30,15 @@ void Printer::printImg(Mat img, string filename, vector <vector<int>> memberOfCl
         }
     }
     stringstream file;
-    file << filedest << filename << ".png";
+    file << path.string() << filename << ".png";
     imwrite(file.str(),temp);
 }
-void Printer::debugPrintImg(Mat img, string filename, int clusterCount,
+void Printer::debugPrintImg(Mat img,boost::filesystem::path path, string filename, int clusterCount,
                             vector<vector<int>> memberOfCluster, vector<Vec6f> centers) {
-    string filedest = "/home/nilus/test";
     int counter = 0;
     for (int i = 0; i < centers.size(); i++) {
         stringstream folder;
-        folder<<filedest<<"/clusterCount" << clusterCount <<"/";
+        folder<<path.string() <<"/clusterCount" << clusterCount <<"/";
         boost::filesystem::create_directories(folder.str());
         Mat temp (img.size(),img.type());
         for (int y = 0; y < img.cols; y++)
@@ -67,7 +65,7 @@ void Printer::debugPrintImg(Mat img, string filename, int clusterCount,
         counter ++;
     }
 }
-void Printer::printCountours(Mat img, vector<vector<Point>> contours) {
+void Printer::printCountours(Mat img,boost::filesystem::path path, vector<vector<Point>> contours) {
     Mat temp (img.size(),img.type());
     Vec3b tmp = Vec3b(255,255,255);
     for (int y = 0; y < img.cols; y++) {
@@ -82,12 +80,11 @@ void Printer::printCountours(Mat img, vector<vector<Point>> contours) {
     tmp = Vec3b(0,0,0);
     for( int i = 0; i< contours.size(); i++ ) {
         stringstream file;
-        string filedest = "/home/nilus/test/";
         for (int j = 0; j < contours[i].size(); j++) {
             temp.at<Vec3b>(contours[i][j].y,contours[i][j].x) = tmp;
             temp3.at<Vec3b>(contours[i][j].y,contours[i][j].x) = tmp;
         }
-        file << filedest << "contours" << i <<".png";
+        file << path.string() << "contours" << i <<".png";
         imwrite(file.str(),temp);
         temp2.copyTo(temp);
     }

@@ -13,16 +13,16 @@ using namespace cv;
 class VideoCapturer
 {
 public:
-    VideoCapturer(string filen, string filed, bool hsv);
+    VideoCapturer(string filen, boost::filesystem::path path, bool hsv);
     ~VideoCapturer();
     VideoCapture cap;
     int readVideo();
-    vector<Mat> readFrames();
+    int readFrames();
 private:
     // the filename of the videosource
     string filename;
     // the filelocation where the image will be stored (if decommented)
-    string filedest;
+    boost::filesystem::path path;
     double fps;
     vector<Mat> frames;
     // for debugging, returns the type of img as string
