@@ -7,6 +7,7 @@
 
 #include "Calculator.hpp"
 
+// returns the distance/variance when only considering the geomtrical features (xy) and the euclidean distance
 class CoordEucCalculator: public Calculator {
 public:
     CoordEucCalculator(int maxX, int maxY);

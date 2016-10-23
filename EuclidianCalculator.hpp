@@ -7,6 +7,7 @@
 
 #include "Calculator.hpp"
 
+// returns the distance/variance when only considering the color space and the euclidean distance
 class EuclidianCalculator : public Calculator{
 public:
     EuclidianCalculator(int maxX, int maxY);

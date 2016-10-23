@@ -16,6 +16,8 @@ VideoCapturer::VideoCapturer(string filen, boost::filesystem::path path, bool hs
     this->path = path;
     double fps = 0;
     VideoCapture cap;
+    // checks wheter the given file is a path, if so a video seq consisting of images is expected, otherwise a video
+    // file is expected
     if(boost::filesystem::is_directory(filename)) video = false;
     else video = true;
     this->hsv=hsv;
@@ -34,11 +36,8 @@ int VideoCapturer::readVideo()
             cout << "Cannot open the video file" << endl;
             return -1;
         }
-
-        //cap.set(CV_CAP_PROP_POS_MSEC, 300); //start the video at 300ms
-
-        // fps = cap.get(CV_CAP_PROP_FPS); //get the frames per seconds of the video
-
+        //get the frames per seconds of the video
+        // fps = cap.get(CV_CAP_PROP_FPS);
         // cout << "Frame per seconds : " << fps << endl;
     }
     return 0;
@@ -48,7 +47,7 @@ int VideoCapturer::readFrames()
 {
     int counter = 0;
     size_t i= 0;
-    vector<cv::String> filenames; // notice the Opencv's embedded "String" class
+    vector<cv::String> filenames;
     cv::String folder = filename;
     if (!video) {
         glob(folder, filenames);
@@ -72,11 +71,12 @@ int VideoCapturer::readFrames()
             stringstream filename;
             if (hsv) {
                 cvtColor(tmp, tmp, COLOR_BGR2HSV);
-                filename << "original" << counter;
-                Printer::printImg(tmp, path, filename.str());
             }
+            filename << "original" << counter;
+            Printer::printImg(tmp, path, filename.str());
             i++;
             counter++;
+            // prints how many different color values exist in the image
             /*
             vector<Vec3b> numberOfColors;
             for (int y = 0; y < tmp.cols; y++) {

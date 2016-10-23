@@ -64,6 +64,9 @@ void Printer::debugPrintImg(Mat img,boost::filesystem::path path, string filenam
         imwrite(file.str(),temp);
         counter ++;
     }
+    stringstream combindedFile;
+    combindedFile << "combined" << clusterCount;
+    Printer::printImg(img, path, combindedFile.str(),memberOfCluster,centers);
 }
 void Printer::printCountours(Mat img,boost::filesystem::path path, vector<vector<Point>> contours) {
     Mat temp (img.size(),img.type());

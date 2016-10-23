@@ -16,7 +16,9 @@ public:
     VideoCapturer(string filen, boost::filesystem::path path, bool hsv);
     ~VideoCapturer();
     VideoCapture cap;
+    // opens the video
     int readVideo();
+    // reads the frames of the source files and writes them into the specific location
     int readFrames();
 private:
     // the filename of the videosource
@@ -29,6 +31,7 @@ private:
     string type2str(int type);
     // if true a video is expected, if false a folder including a videoSeq is expected
     bool video;
+    // if true the source file will be converted into HSV
     bool hsv;
 };
 

@@ -21,17 +21,21 @@ class Calculator {
 
 public:
     virtual ~Calculator()  {}
+    // returns the corresponding distance
     virtual float distance(Vec5f vec1, Vec5f vec2) = 0;
     virtual float distance(Vec5f vec1, Vec6f vec2) = 0;
     virtual float distance(Vec6f vec1, Vec6f vec2) = 0;
     virtual float distance(Vec6f vec1, Vec5f vec2) = 0;
 
+    // returns the calculated variances without the divisor part!
     // the division needed to get the actual variance occurs later on
     virtual Vec5f variance(Vec5f vec1, Vec6f vec2) = 0;
     virtual Vec5f variance(Vec6f vec1, Vec5f vec2) = 0;
 
+    // returns the single variance (instad of a vector inluding the variance of each attribute)
     virtual float singleVariance(Vec5f vector) = 0;
 
+    // returns the maximal coordinates of this image
     virtual int getMaxX() = 0;
     virtual int getMaxY() = 0;
 private:

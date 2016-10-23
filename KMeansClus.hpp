@@ -15,19 +15,23 @@ using namespace cv;
 class KMeansClus
 {
 public:
-    // Constructor where the optimal number of k is calculated automatically
+    // Constructor where the optimal number of k is calculated automatically using the first frame of the video seq
     KMeansClus(Calculator* calculator, bool realVid, string fileLoc, string filedest);
-    // Constructor with given k-number (only clusters the first image)
+    // Constructor with given k-number, which assigns the centers randomly (only clusters the first image)
     KMeansClus(int k, Calculator* calculator, bool realVid, string fileLoc, string filedest);
+    // deconstructor
     ~KMeansClus();
-    // the usage of the kmean algorithm
+    // clusters the whole video Sequence
     void startClustering(int frameCount);
-    // the actual kMeans algorithm, if clusterToSplit == -1 the regular algorith will be executed
-    // otherwise it will split the selectedCluster according to its center and the center of centers.size()-1
-    void kMeansAlgorithm(Mat img);
+    // the actual kMeans algorithm
     void kMeansAlgorithm(Mat img, Calculator* calculator);
+    // k-means algorithm which uses the member variables
+    void kMeansAlgorithm(Mat img);
+    // k-means algorithm where only the pixels which are part of the clusters described in limitedCluster are clustered
+    // necessary for splitting the clustering process of color and geomatrical segmentation
     void kMeansLimitedAlgorithm(Mat img, vector <vector<int>>* memberOfCluster, Calculator* calculator,
                                              vector <int> limitedCluster);
+
     // returns the current validity
     float getValidity (Mat img);
     //  set Calculator
@@ -38,24 +42,27 @@ private:
     vector<Vec6f> centers;
     // maximal k
     const int kMax = 8;
-    // the index of this vectors assigns clusters to the corresponding coordinates in the particular image
+    // the index of this vectors describes to which clusters the corresponding coordinates belong
+    // it shares the column and row size of the examined image
     vector <vector<int>> memberOfCluster;
-    // for data reduction test purposes, here the member of clusters of each frame is stored
+    // for data reduction test purposes
+    // it stores the memberOfCluster resulting in each frame
     vector <vector <vector<int>>> vecMemOfCluster;
     // calculates the mean of matrix
     Vec3f meanCalculator(Mat matrix);
+    // The used calculator responsible for variance/distance calculation
     Calculator* calculator;
-    // a boolean which determines whether i is a synthetic or real video
+    // a boolean which determines whether it is a synthetic or real video
     bool realVid;
-    // the old calculated Centers using calculateK are stored here
+    // the old calculated centers are stored here (for determing the validity for k-1/k+1)
     vector<vector <Vec6f>> bestCenters;
-    // at the index of this vector the corresponding supercluster for each cluster is stored
+    // at the index of this vector the corresponding super-cluster for each cluster is stored
     vector <vector<int>> superClusterPosition;
-    // here the centers overlap over each frame
+    // the centers of the super-clusters
     vector <Vec6f> supercenters;
     // the folder where the images are stored
     boost::filesystem::path path;
-    // the folder where the images of the vidSeq are
+    // the folder where the images of the video seq are
     boost::filesystem::path fileLoc;
     // the delta determines the maximal possible deviation from one cluster to its super-cluster
     float delta = 0.20;

@@ -7,7 +7,8 @@
 
 #include "Calculator.hpp"
 #include "EuclidianCalculator.hpp"
-
+// returns the distance/variance when only considering the hue and value and the euclidean distance
+// not used in the bachelor thesis
 class HSVEucCalculator : public Calculator{
 public:
     HSVEucCalculator(int maxX, int maxY);

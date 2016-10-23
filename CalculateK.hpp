@@ -12,21 +12,23 @@
 
 class CalculateK {
 public:
-    // calculate the optimal value of k
+    // calculate the "optimal" number of clusters, this algorithm has been proposed by Ray, Siddheswar and Turi, Rose H
+    // in "Determination of number of clusters in k-means clustering and application in colour image segmentation"
     // the calculated centers for each iteration are stored in bestCenters
     int static calculateK(Mat img, Calculator* calculator, vector<Vec6f>* centers, KMeansClus* kMeans,
                           boost::filesystem::path path, vector <vector<int>>* memberOfCluster,
                           bool realVid, vector<vector <Vec6f>>* bestCenters);
-    // check whether the segmented clusters keep their neighborhoodproperties and if not it creates new clusters
-    bool static neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans, boost::filesystem::path path,
+    // check if the clusters span boundaries and if so create new boundaries
+    bool static boundaryCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans, boost::filesystem::path path,
                               vector <vector<int>>* memberOfCluster, Calculator* calculator);
     // calculates the validity
     float static getValidity(Mat img, Calculator* calculator, vector<Vec6f>* centers,
                              vector <vector<int>>* memberOfCluster);
+    // splits the cluster with the highest variance
     void static splitCluster(Mat img, Calculator* calculator, vector<Vec6f>* centers,
                              vector <vector<int>>* memberOfCluster);
 private:
-    int const static kMax = 10;
+    int const static kMax = 25;
 };
 
 

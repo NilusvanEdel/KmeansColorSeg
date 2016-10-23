@@ -23,6 +23,8 @@ KMeansClus::KMeansClus(Calculator* calculator, bool realVid, string fileLoc, str
     glob(folder, filenames);
     Mat img;
     img = imread(filenames[0]);
+    // resize memberOfCluster so that its column and row size equal the ones of the image
+    // important since the index of this vector will be used for identifying the cluster of the particular pixel
     memberOfCluster.resize(img.rows);
     for (int i = 0; i < img.rows; ++i)
         memberOfCluster[i].resize(img.cols);
@@ -33,6 +35,7 @@ KMeansClus::KMeansClus(Calculator* calculator, bool realVid, string fileLoc, str
             memberOfCluster[x][y] = 0;
         }
     }
+    // calculates the "optimal" cluster count for the first frame
     CalculateK::calculateK(img, calculator, &centers, this, path, &memberOfCluster,
                            realVid, &bestCenters);
     img.release();
@@ -44,11 +47,14 @@ KMeansClus::KMeansClus(int k, Calculator* calculator, bool realVid, string fileL
     path = boost::filesystem::path(filedest);
     this->fileLoc = boost::filesystem::path(fileLoc);
     centers = vector<Vec6f>(k);
-    vector<cv::String> filenames; // notice the Opencv's embedded "String" class
+    vector<cv::String> filenames;
     cv::String folder = fileLoc;
+    // collects all files within the fileLoc (the source frames are stored here)
     glob(folder, filenames);
     Mat img;
     img = imread(filenames[0]);
+    // resize memberOfCluster so that its column and row size equal the ones of the image
+    // important since the index of this vector will be used for identifying the cluster of the particular pixel
     memberOfCluster.resize(img.cols);
     for (int i = 0; i < img.rows; ++i)
         memberOfCluster[i].resize(img.cols);
@@ -59,7 +65,7 @@ KMeansClus::KMeansClus(int k, Calculator* calculator, bool realVid, string fileL
             memberOfCluster[x][y] = 0;
         }
     }
-    // generate random initial clusterpoints
+    // generate random initial cluster centers
     std::random_device generator;
     uniform_int_distribution<int> distribution(0, 255);
     uniform_int_distribution<int> distribution2(0, calculator->getMaxX());
@@ -72,23 +78,29 @@ KMeansClus::KMeansClus(int k, Calculator* calculator, bool realVid, string fileL
         centers[i](4) = distribution3(generator);
         centers[i](5) = 0;
     }
+    // runs the basic k-means algorithm on the random cluster centers
     kMeansAlgorithm(img);
+    // print each cluster separately
     Printer::debugPrintImg(img, path, "testForK_", k, memberOfCluster, centers);
     img.release();
 }
 
-//deallocator
 KMeansClus::~KMeansClus() {
     vector<Vec6f>().swap(centers);
     vector<vector<int>>().swap(memberOfCluster);
 }
 
 
+
 void KMeansClus::startClustering(int frameCount) {
-    // begin of the loop
-    vector<cv::String> filenames; // notice the Opencv's embedded "String" class
+    // the number of clusters at each frame will be contained in this stream
+    stringstream clusterCount;
+    clusterCount << centers.size() << " ";
+    vector<cv::String> filenames;
     cv::String folder = fileLoc.string();
+    // write the location of the source frames into filenames
     glob(folder, filenames);
+    // initialize the first super-cluster centers with the centers of the first frame
     superClusterPosition.resize(frameCount);
     for (int i = 0; i < centers.size(); i++) {
         supercenters.push_back(centers[i]);
@@ -96,15 +108,17 @@ void KMeansClus::startClustering(int frameCount) {
     }
     Mat img;
     img = imread(filenames[0]);
+    //create images for each cluster of the first frame separately
     stringstream filename;
     filename << "clustered0" ;
     Printer::debugPrintImg(img, path, "testForK_", centers.size(), memberOfCluster, centers);
+    //create an image of the clustered first frame
     Printer::printImg(img,path, filename.str(),memberOfCluster,centers);
 
-
+    // store the memberOfCluster of the first frame
     vecMemOfCluster = vector<vector<vector<int>>>(frameCount);
     vecMemOfCluster[0]= memberOfCluster;
-    //toggle here and below to print all clusters
+    //Print all clusters of this frame in a separate folder
     stringstream newFolder;
     newFolder<<path.string() <<"/clusters_" << 0 <<"/";
     boost::filesystem::create_directories(newFolder.str());
@@ -112,15 +126,24 @@ void KMeansClus::startClustering(int frameCount) {
     Printer::debugPrintImg(img, newPath, "test_", centers.size(), memberOfCluster, centers);
 
     cout << "frame: " << 0 <<" written" << endl;
+    // begin of the loop
     for (int frameCounter = 1; frameCounter < frameCount; frameCounter++)
     {
         img = imread(filenames[frameCounter]);
-        // bestk size = 0 equals k = 2
+
+        // note that the bestk[0] stores the centers for k = 2!
         int currentBestk = centers.size();
+        /*
+         * the procedure which tweaks the algorithm of Ray and Turi for video sequences
+         * if possible the old centers for k-2 will be used for the k-means algorithm on the current frame
+         * then the cluster with highest variance is split and the k-means algorithm will be run again and the validity
+         * for k-1 is calculated, the same will be done for k and k+1
+         */
         float validityKSmaller = INT_MAX;
         if (currentBestk > 3) {
             centers = bestCenters[currentBestk - 4];
             kMeansAlgorithm(img);
+            // bestCenters is updated on every iteration to contain information from the previous frame
             bestCenters[currentBestk - 4] = centers;
             CalculateK::splitCluster(img, calculator, &centers, &memberOfCluster);
         }
@@ -136,6 +159,9 @@ void KMeansClus::startClustering(int frameCount) {
         kMeansAlgorithm(img);
         float validity = CalculateK::getValidity(img, calculator, &centers, &memberOfCluster);
         bestCenters[currentBestk-2] = centers;
+        /* stores memberOfCluster for the current frame to reload it if after validity of k+1 is calculated,
+         * which changesof memberOfClusters
+         * important if k still constitutes a local minimum*/
         vector <vector<int>> memberOfClusterTemp(memberOfCluster);
         float validityKBigger = INT_MAX;
         if (currentBestk < bestCenters.size()) {
@@ -146,16 +172,16 @@ void KMeansClus::startClustering(int frameCount) {
         }
         centers = bestCenters[currentBestk-2];
         memberOfCluster = memberOfClusterTemp;
-        // if k is still a local Minima
+        // if k is still a local minimum
         if (!(validity <= validityKBigger && validity < validityKSmaller)) {
             cout << "new K Calculation" << endl;
             CalculateK::calculateK(img, calculator, &centers, this,
                                    path, &memberOfCluster,realVid, &bestCenters);
         }
 
-        // toggle for correct results (will perform full dynamic clustercount algorithm on every frame)
+        // toggle for correct results (will perform full/undapted dynamic clustercount algorithm on every frame)
         //
-        /* CalculateK::calculateK(img, calculator,
+        /* K::calculateK(img, calculator,
                                &centers, this, path, &memberOfCluster, realVid, &bestCenters); */
 
         // if no superclusters exist, the first centers will be the first superclusters
@@ -174,40 +200,46 @@ void KMeansClus::startClustering(int frameCount) {
                 if (i == 4) deltaDisVector[i] == maxY * delta;
             }
             float deltaDistance = calculator->distance(Vec5f(0,0,0,0,0), deltaDisVector);
+            /* notice that instead of normalizing the rgb values the x and y coordinates are multiplied with 255
+            * this works fot the HSV color space as well, because the openCV library stores all 3 values in [0,255]
+            * as well
+            */
             deltaDistance += sqrt(pow(0 - deltaDisVector[3] / maxX * 255, 2) +
                                   pow(0 - deltaDisVector[4] / maxY * 255, 2));
             for (int i = 0; i < supercenters.size(); i++) {
                 float distance_col = calculator->distance(centers[j],supercenters[i]);
                 float distance_pix = sqrt(pow(centers[j](3) / maxX * 255 - supercenters[i](3) / maxX * 255, 2) +
                                           pow(centers[j](4) / maxY * 255 - supercenters[i](4) / maxY * 255, 2));
-                // check which supercluster is the closest one and whether it is in the deltazone
+                // check which supercluster is the closest one and whether it is in the delta zone
                 float tmpDis = distance_col+distance_pix;
                 if (tmpDis < mindistance && tmpDis <= deltaDistance ) {
                     index = i;
                     mindistance = tmpDis;
                 }
             }
-            // if no cluster was in the deltazone it is the beginning of a new supercluster
+            // if no cluster was in the delta zone it is the beginning of a new super-cluster
             if (index == -1) {
                 supercenters.push_back(centers[j]);
                 index = supercenters.size()-1;
             }
             superClusterPosition[frameCounter].push_back(index);
         }
-        // update supercenters
+        // update centers of the super-clusters
         for (int i = 0; i < centers.size(); i++) {
             int pos = superClusterPosition[frameCounter][i];
             supercenters[pos] = centers[i];
         }
 
+        clusterCount << centers.size() << " ";
         stringstream filename;
         filename << "clustered" << frameCounter;
         Printer::debugPrintImg(img, path,"testForK_", centers.size(), memberOfCluster, centers);
+        // writes the clustered frame
         Printer::printImg(img, path, filename.str(),memberOfCluster,centers);
         cout << "frame: " <<frameCounter <<" written" << endl;
-
+        // store the information about which pixel belongs to which cluster of the current frame
         vecMemOfCluster[frameCounter]= memberOfCluster;
-        //toggle to print all clusters
+        //writes all clusters indiviudally
         stringstream newFolder;
         newFolder<<path.string() <<"/clusters_" << frameCounter <<"/";
         boost::filesystem::create_directories(newFolder.str());
@@ -224,7 +256,7 @@ void KMeansClus::startClustering(int frameCount) {
         cout << endl;
     }
 
-    // print only using the superClusters
+    // writes the whole video sequence using the super-clusters only
     for (int i = 0; i < superClusterPosition.size(); i++) {
         for (int j = 0; j < superClusterPosition[i].size(); j++) {
             centers.resize(superClusterPosition[i].size());
@@ -234,6 +266,7 @@ void KMeansClus::startClustering(int frameCount) {
         superClusterPrintName << "superCluster_" << i;
         Printer::printImg(img, path, superClusterPrintName.str(),vecMemOfCluster[i],centers);
     }
+    cout << clusterCount.str() << endl;
     return;
 }
 
@@ -242,8 +275,9 @@ void KMeansClus::kMeansAlgorithm(Mat img) {
 }
 
 void KMeansClus::kMeansAlgorithm(Mat img, Calculator* calculator) {
-    // the index of this array assigns the pixels of frames[i] to the corresponding clusters
+    // used to keep track of the occured changes in each iteration
     int changes;
+    // used as early break condition if k-means clustering takes too long
     float limitChanges = (float)(img.cols*img.rows);
     limitChanges*=0.001;
     int counter = 0;
@@ -256,11 +290,13 @@ void KMeansClus::kMeansAlgorithm(Mat img, Calculator* calculator) {
         {
             for (int x = 0; x < img.rows; x++)
             {
+                // vector to include the rgb and xy values of the current pixel
                 Vec3b tmp = img.at<Vec3b>(x, y);
                 for (int i = 0; i < 3; i++) ColorAndPixelSpace[i]=(int)tmp[i];
                 ColorAndPixelSpace[3] = x;
                 ColorAndPixelSpace[4] = y;
                 int cluster = 0;
+                // search the closest cluster
                 float min = calculator->distance((Vec5f)ColorAndPixelSpace, centers[cluster]);
                 for (int i = 1; i < centers.size(); i++)
                 {
@@ -271,6 +307,7 @@ void KMeansClus::kMeansAlgorithm(Mat img, Calculator* calculator) {
                         cluster = i;
                     }
                 }
+                // if the respective pixel changed the cluster membership
                 if (memberOfCluster[x][y] != cluster)
                 {
                     memberOfCluster[x][y] = cluster;
@@ -278,7 +315,7 @@ void KMeansClus::kMeansAlgorithm(Mat img, Calculator* calculator) {
                 }
             }
         }
-        // calculate new centers
+        // calculate new centers as described in Ray and Turi (see bachelor thesis 2.4)
         vector<Vec6f> newCenters(centers.size());
         std::fill(newCenters.begin(), newCenters.end(), Vec6f(0,0,0,0,0,0));
         for (int y = 0; y < img.cols; y++)
@@ -291,6 +328,7 @@ void KMeansClus::kMeansAlgorithm(Mat img, Calculator* calculator) {
                 newCenters[cluster](5)++;
             }
         }
+        // calculate the actual cluster centers (the mean of each cluster, so far the values were only summed up)
         for (int i = 0; i < centers.size(); i++)
         {
             for (int j = 0; j < 5; j++)
@@ -304,6 +342,7 @@ void KMeansClus::kMeansAlgorithm(Mat img, Calculator* calculator) {
             if (newCenters[i](5) > 0) centers[i] = newCenters[i];
             else centers[i](5)= 0;
         }
+        // update break condition
         if (counter > 10) limitChanges = pow(limitChanges,2);
     } while (changes > limitChanges);
 }
@@ -316,6 +355,7 @@ void KMeansClus::setCalculator(Calculator *calculator) {
     this->calculator = calculator;
 }
 
+// basically the same as in kMeansAlgorithm (but including the check of limitedCluster)
 void KMeansClus::kMeansLimitedAlgorithm(Mat img, vector <vector<int>>* memberOfCluster, Calculator* calculator,
                                          vector <int> limitedCluster) {
     // the index of this array assigns the pixels of frames[i] to the corresponding clusters

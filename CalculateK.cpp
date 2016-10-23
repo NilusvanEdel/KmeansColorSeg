@@ -16,6 +16,7 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     cout << "start calculation of K" << endl;
     centers->clear();
     bestCenters->clear();
+    // clear possible old values in memberOfCluster
     for (int i = 0; i < img.rows; ++i)
         (*memberOfCluster)[i].resize(img.cols);
     for (int y = 0; y < img.cols; y++)
@@ -107,7 +108,8 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
     *centers = (*bestCenters)[bestK-2];
     kmeans->kMeansAlgorithm(img);
     cout << "best k before NeighborCheck: " << bestK << endl;
-    /*CalculateK::neighborCheck(img, centers, kmeans, memberOfCluster, calculator);
+    // implements the boundary Check, which splits clusters further according to detected boundaries
+    /*CalculateK::boundaryCheck(img, centers, kmeans, memberOfCluster, calculator);
     bestK = centers->size();
     cout << "best k after NeighborCheck: " << bestK << endl;
     Printer::debugPrintImg(img, "finalK_", bestK, *memberOfCluster, *centers);
@@ -117,13 +119,16 @@ int CalculateK::calculateK(Mat img, Calculator* calculator, vector<Vec6f>* cente
 }
 
 
-bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans, boost::filesystem::path path,
+bool CalculateK::boundaryCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmeans, boost::filesystem::path path,
                                vector <vector<int>>* memberOfCluster, Calculator* calculator) {
     bool change = false;
     int initialCentersize = centers->size();
+    // queue to check all clusters (despite the clusters which have been created in this function)
     for (int i = 0; i < initialCentersize; i++) {
         cout << i << endl;
         Mat temp(img.size(), img.type());
+        // create a matrix with the same size as the source image, but filled only by the pixels of the certain cluster
+        // the rest will be filled with the rgb values for white
         for (int y = 0; y < img.cols; y++) {
             for (int x = 0; x < img.rows; x++) {
                 int cluster = (*memberOfCluster)[x][y];
@@ -140,11 +145,14 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
                 temp.at<Vec3b>(x, y) = tmp;
             }
         }
+        // convert the image of this particular cluster into a gray scale image
         Mat img_gray;
         cvtColor( temp, img_gray, CV_BGR2GRAY );
+        // adjust the saturation
         equalizeHist(img_gray, img_gray);
+        // blur the image
         blur( img_gray, img_gray, Size(2,2) );
-        //blured grayscale image to binary image
+        //convert the blured grayscale image to a binary image
         Mat binaryMat(img_gray.size(), img_gray.type());
         //Apply thresholding
         threshold(img_gray, binaryMat, 100, 255, THRESH_BINARY);
@@ -153,7 +161,7 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
         Mat canny_output;
         vector<vector<Point> > contours;
         vector<Vec4i> hierarchy;
-        /// Detect edges using canny
+        /// Detect edges using canny algorithm
         Canny( binaryMat, canny_output, 100, 100*2, 3 );
         stringstream file;
         file << "contours" << i;
@@ -177,7 +185,7 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
             }
             x /= contours[t].size();
             y /= contours[t].size();
-
+            //check if the polygon actually surrounds pixel inside of this cluster
             background = true;
             for (int z = -1; z < 2; z++) {
                 for (int l = -1; l < 2; l++) {
@@ -189,19 +197,26 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
                 }
             }
         }
+        // if the polygon does not surround pixel inside of this cluster
         if (background) {
             cout << "Background at cluster: " << i << endl;
             break;
         }
+        // else split the cluster centers according to the polygon
 
         if (!background) {
+            // if the current cluster has not been split yet, change the position of it
             if (!newCenters) {
                 (*centers)[i] = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
             }
+            // otherwise ceate a new cluster consisting of the old color but with new coordinates
             else {
                 Vec6f newCenter = Vec6f((*centers)[i][0], (*centers)[i][1], (*centers)[i][2], y, x, 0);
                 centers->push_back(newCenter);
             }
+            // find the center of this polygon and put it in the respective cluster center
+            // decomment this part and toggle the k-means part if the splitting should occure according to k-means
+            // _________________________________________________________________________________________________________
             for (int y = 0; y < img.cols; y++) {
                 for (int x = 0; x < img.rows; x++) {
                     if ((*memberOfCluster)[x][y] == i) {
@@ -213,9 +228,11 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
                 }
             }
             newCenters = true;
+            //__________________________________________________________________________________________________________
         }
         change = true;
-        // assign the new clusters via k_Means
+        // toggle to assign the new clusters instead via k_Means using a 5d or 2d-feature vectore
+        //______________________________________________________________________________________________________________
         /*
         Calculator* coordEucCalculator = new PixEucCalculator(temp.rows, temp.cols);
         vector <int> limitedCluster;
@@ -225,43 +242,49 @@ bool CalculateK::neighborCheck(Mat img, vector<Vec6f>* centers, KMeansClus* kmea
         }
         kmeans->kMeansLimitedAlgorithm(img, memberOfCluster, coordEucCalculator,limitedCluster);
         */
+        //______________________________________________________________________________________________________________
     }
     return change;
 }
 
 float CalculateK::getValidity(Mat img, Calculator* calculator, vector<Vec6f> *centers,
                               vector <vector<int>>* memberOfCluster) {
-    float intraMeassure = 0;
+    float intraMeasure = 0;
+    // calculate the intra meassure (the average distance from each pixel to its respective cluster center)
     for (int y = 0; y < img.cols; y++)
     {
         for (int x = 0; x < img.rows; x++)
         {
             Vec3b tmp = img.at<Vec3b>(x, y);
-            intraMeassure += calculator->distance(Vec5f(tmp[0],tmp[1],tmp[2],x,y),
+            intraMeasure += calculator->distance(Vec5f(tmp[0],tmp[1],tmp[2],x,y),
                                                   (*centers)[(*memberOfCluster)[x][y]]);
         }
     }
-    intraMeassure /= img.rows*img.cols;
-    float interMeassure = calculator->distance((*centers)[0],(*centers)[1]);
+    intraMeasure /= img.rows*img.cols;
+    // calculate the inter measure (the minmal distance from two clusters)
+    float interMeasure = calculator->distance((*centers)[0],(*centers)[1]);
     for (int i = 1; i < centers->size(); i++) {
         for (int j = 1; j < centers->size(); j++) {
             if (j==i) continue;
             float distance = calculator->distance((*centers)[i],(*centers)[j]);
-            if (distance < interMeassure) interMeassure = distance;
+            if (distance < interMeasure) interMeasure = distance;
         }
     }
     // the actual validity, note: if max at validity[0] --> k=2
     float currentValidity = INT_MAX;
-    if (interMeassure!=0) currentValidity = intraMeassure/interMeassure;
+    if (interMeasure!=0) currentValidity = intraMeasure/interMeasure;
     return currentValidity;
 }
+
 
 void CalculateK::splitCluster(Mat img, Calculator* calculator, vector<Vec6f>* centers,
                               vector <vector<int>>* memberOfCluster) {
     // calculate the variance of the clusters
     // fill the vectors with 00000 or the maximum values of the attributes
     vector <Vec5f> variance(centers->size());
+    // will be used to get the mimal values for colorspace and coordinates for the corresponding cluster
     vector <Vec5i> minColAndPixSpace(centers->size());
+    // will be used to get the maximal values for colorspace and coordinates for the corresponding cluster
     vector <Vec5i> maxColAndPixSpace(centers->size());
     for (auto it= minColAndPixSpace.begin(); it != minColAndPixSpace.end(); it++)
         *it = Vec5i(255,255,255,calculator->getMaxX(),calculator->getMaxY());
@@ -314,35 +337,6 @@ void CalculateK::splitCluster(Mat img, Calculator* calculator, vector<Vec6f>* ce
     newClusterCenter = oldCCenter + a;
     centers->push_back(Vec6f(newClusterCenter.val[0],newClusterCenter.val[1],newClusterCenter.val[2],
                              newClusterCenter.val[3],newClusterCenter.val[4],0));
-    // the new clusters may not exceed the limits (actually they probably may)
-    /* for (int i = 0; i < 5; i++) {
-        // limit fix for color space
-        if (i < 3) {
-            if ((*centers)[clusterToSplit][i] < 0) (*centers)[clusterToSplit][i] = 0;
-            if ((*centers)[centers->size() - 1][i] < 0) (*centers)[centers->size() - 1][i] = 0;
-            if ((*centers)[clusterToSplit][i] > 255) (*centers)[clusterToSplit][i] = 255;
-            if ((*centers)[centers->size() - 1][i] > 255) (*centers)[centers->size() - 1][i] = 255;
-        }
-            // limit fix for coordinate space
-        else if (i >= 3 ){
-            if ((*centers)[clusterToSplit][i] < 0) (*centers)[clusterToSplit][i] = 0;
-            if ((*centers)[centers->size() - 1][i] < 0) (*centers)[centers->size() - 1][i] = 0;
-            if (i == 3) {
-                if ((*centers)[clusterToSplit][i] > calculator->getMaxX())
-                    (*centers)[clusterToSplit][i] = calculator->getMaxX();
-                if ((*centers)[centers->size() - 1][i] > calculator->getMaxX())
-                    (*centers)[centers->size() - 1][i] = calculator->getMaxX();
-            }
-            else if (i == 4)
-            {
-                if ((*centers)[clusterToSplit][i] > calculator->getMaxY())
-                    (*centers)[clusterToSplit][i] = calculator->getMaxY();
-                if ((*centers)[centers->size() - 1][i] > calculator->getMaxY())
-                    (*centers)[centers->size() - 1][i] = calculator->getMaxY();
-            }
-        }
-    }
-     */
     for (int y = 0; y < img.cols; y++)
     {
         for (int x = 0; x < img.rows; x++)
